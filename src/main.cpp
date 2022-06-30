@@ -1,123 +1,144 @@
 #include <Arduino.h>
-
-// #include <HomeSpan.h>
-
-// const char* ssid = "104-2.4";
-// const char* password = "18950098099";
-
-// struct MySwitch : Service::Switch {
-//   int ledPin;
-//   SpanCharacteristic* power = nullptr ;
-
-//   MySwitch(int ledPin) : Service::Switch() {
-//     this->ledPin = ledPin;
-//     pinMode(ledPin, OUTPUT);
-//     power = new Characteristic::On();
-//   }
-
-//   bool update() {
-//     digitalWrite(ledPin, power->getNewVal());
-//     return true;
-//   }
-// };
-
 #include <BLEDevice.h>
-#include <BLEUtils.h>
-#include <BLEServer.h>
 
-#define SERVICE_UUID        "8c2ddf54-0847-4ac7-9490-b7abcabb09c3"
-#define CHARACTERISTIC_UUID "d7d829f8-c06a-4247-a8b0-074e9a4e3b78"
+/* Specify the Service UUID of Server */
+static BLEUUID advertisingServiceUUID_short("0000abc0-0000-1000-8000-00805f9b34fb");
+static BLEUUID advertisingServiceUUID_long( "0000fff0-0000-1000-8000-00805f9b34fb");
 
-BLECharacteristic* pCharacteristic;
+static boolean doConnect = false;
+static boolean isConnected = false;
+static boolean doScan = false;
 
-bool deviceConnected = false;
-class MyServerCallbacks: public BLEServerCallbacks {
-  void onConnect(BLEServer* pServer) {
-    deviceConnected = true;
-    Serial.println("[BLE > onConnect]");
+static BLEScan* scan = nullptr;
+static BLEAdvertisedDevice* advertisedDevice = nullptr;
+static BLERemoteCharacteristic* remoteCharacteristicWritable = nullptr;
+
+static void notifyCallback(BLERemoteCharacteristic* remoteCharacteristic, uint8_t* data, size_t length, bool isNotify) {
+  const auto strData = String(data, length);
+  Serial.print("[NotifyCallback] from characteristic ");
+  Serial.print(remoteCharacteristic->getUUID().toString().c_str());
+  Serial.print("data: ");
+  Serial.println(strData);
+  if (strData == "hello" && remoteCharacteristicWritable != nullptr) {
+    String newValue = "RuleeSmart";
+    remoteCharacteristicWritable->writeValue(newValue.c_str(), newValue.length());
   }
-  void onDisconnect(BLEServer* pServer) {
-    deviceConnected = false;
-    Serial.println("[BLE > onDisconnect]");
+}
+
+class MyClientCallback : public BLEClientCallbacks {
+  void onConnect(BLEClient* client) {
+    Serial.println("[BLEClient > onDisconnect]");
+  }
+  void onDisconnect(BLEClient* client) {
+    isConnected = false;
+    remoteCharacteristicWritable = nullptr;
+    Serial.println("[BLEClient > onDisconnect]");
   }
 };
 
-class MyChaCallbacks: public BLECharacteristicCallbacks {
-  void onWrite(BLECharacteristic *pCharacteristic) {
-    std::string value = pCharacteristic->getValue();
-    if (value.length() > 0) {
-      Serial.println("*********");
-      Serial.print("New value: ");
-      for (int i = 0; i < value.length(); i++) {
-        Serial.print(value[i]);
-      }
-      Serial.println();
-      Serial.println("*********");
+void connectCharacteristic(BLERemoteCharacteristic* remoteCharacteristic) {
+  /* Read the value of the characteristic */
+  /* Initial value is 'Hello, World!' */
+  Serial.print("Connecting Characteristic ------> ");
+  Serial.println(remoteCharacteristic->getUUID().toString().c_str());
+
+  if (remoteCharacteristic->canWrite() && remoteCharacteristicWritable == nullptr) {
+    remoteCharacteristicWritable = remoteCharacteristic;
+    Serial.println(" > can write");
+  }
+
+  if (remoteCharacteristic->canRead()) {
+    std::string value = remoteCharacteristic->readValue();
+    Serial.println(" > can read");
+    Serial.print(" > value is: [");
+    Serial.print(value.c_str());
+    Serial.println("]");
+    // only for read from server
+    if (remoteCharacteristic->canNotify()) {
+      remoteCharacteristic->registerForNotify(notifyCallback);
+      Serial.println(" > registerForNotify");
+    }
+  }
+}
+
+void connectService(BLERemoteService* pRemoteService) {
+  Serial.println();
+  Serial.print("Connecting Service ------> ");
+  Serial.println(pRemoteService->getUUID().toString().c_str());
+  std::map<std::string, BLERemoteCharacteristic*>* remoteCharacteristics = pRemoteService->getCharacteristics();
+  for (auto it = remoteCharacteristics->begin(); it != remoteCharacteristics->end(); it++) {
+    connectCharacteristic(it->second);
+  }
+}
+
+bool connectToServer() {
+  Serial.print("Forming a connection to ");
+  Serial.println(advertisedDevice->getAddress().toString().c_str());
+
+  BLEClient* client = BLEDevice::createClient();
+  client->setClientCallbacks(new MyClientCallback());
+  Serial.println(" - Created client");
+
+  /* Connect to the remote BLE Server */
+  client->connect(advertisedDevice);  // if you pass BLEAdvertisedDevice instead of address, it will be recognized type of peer device address (public or private)
+  Serial.println(" - Connected to server");
+
+  /* Obtain reference to the service we are after in the remote BLE server */
+  std::map<std::string, BLERemoteService*>* remoteServices = client->getServices();
+  for (auto it = remoteServices->begin(); it != remoteServices->end(); it++) {
+    connectService(it->second);
+  }
+  isConnected = true;
+  return true;
+}
+
+class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
+  /* Called for each advertising BLE server. */
+  void onResult(BLEAdvertisedDevice advDevice) {
+    Serial.print("BLE Advertised Device found: ");
+    Serial.println(advDevice.toString().c_str());
+    /* We have found a device, let us now see if it contains the service we are looking for. */
+    if (
+      advDevice.haveServiceUUID() &&
+      (advDevice.isAdvertisingService(advertisingServiceUUID_short) ||
+      advDevice.isAdvertisingService(advertisingServiceUUID_long))
+    ) {
+      scan->stop();
+      advertisedDevice = new BLEAdvertisedDevice(advDevice);
+      doConnect = true;
+      doScan = true;
     }
   }
 };
-
-void initBleServer() {
-  BLEDevice::init("Victor-Gateway");
-  auto pServer = BLEDevice::createServer();
-  pServer->setCallbacks(new MyServerCallbacks());
-  auto pService = pServer->createService(SERVICE_UUID);
-  pCharacteristic = pService->createCharacteristic(
-    CHARACTERISTIC_UUID,
-    BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE
-  );
-  pCharacteristic->setCallbacks(new MyChaCallbacks());
-  pCharacteristic->setValue("Hello!");
-  pService->start();
-
-  auto pAdvertising = pServer->getAdvertising();
-  pAdvertising->addServiceUUID(SERVICE_UUID);
-  pAdvertising->setScanResponse(true);
-  pAdvertising->setMinPreferred(0x06);
-  pAdvertising->setMinPreferred(0x12);
-  pAdvertising->start();
-
-  Serial.println("Waiting a client connection to notify...");
-}
-
-void initHomeSpan() {
-  // homeSpan.setStatusPin(BUILTIN_LED);
-  // homeSpan.setWifiCredentials(ssid, password);
-  // homeSpan.setPairingCode("18950098");
-  // homeSpan.begin(Category::Switches, "Victor-SWitch");
-
-  // new SpanAccessory();
-  //   new Service::AccessoryInformation();
-  //     new Characteristic::Identify();
-  //     new Characteristic::Name("Victor-Switch");
-  //     new Characteristic::Manufacturer("RuleeSmart");
-  //     new Characteristic::Model("Victor-Switch-ESP32");
-  //     new Characteristic::SerialNumber("202206260023");
-  //     new Characteristic::HardwareRevision("22.1.20");
-  //     new Characteristic::FirmwareRevision("22.2.30");
-  //   new MySwitch(BUILTIN_LED);
-}
 
 void setup() {
   Serial.begin(115200);
-  initBleServer();
-  initHomeSpan();
+  BLEDevice::init("Victor-Gateway");
+  scan = BLEDevice::getScan();
+  scan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+  scan->setInterval(1349);
+  scan->setWindow(449);
+  scan->setActiveScan(true);
+  scan->start(5, false);
 }
 
-unsigned long lastTime = 0;
-unsigned long timerDelay = 5000;
-
 void loop() {
-  // homeSpan.poll();
-  if (deviceConnected) {
-    auto now = millis();
-    if (now - lastTime > timerDelay) {
-      lastTime = now;
-      BLEDevice::startAdvertising();
-      // update characteristic value and notify connected client
-      pCharacteristic->setValue(std::to_string(lastTime));
-      pCharacteristic->notify();
-      Serial.println("[BLE > notify]" + String(lastTime));
+  if (doConnect == true) {
+    doConnect = false;
+    if (connectToServer()) {
+      Serial.println("We are now connected to the BLE Server.");
+    } else {
+      Serial.println("We have failed to connect to the server; there is nothin more we will do.");
     }
   }
+
+  if (isConnected) {
+    String newValue = "Time since boot: " + String(millis() / 5000);
+    Serial.println("Setting new characteristic value to \"" + newValue + "\"");
+    remoteCharacteristicWritable->writeValue(newValue.c_str(), newValue.length());
+  } else if (doScan) {
+    scan->start(0);  // this is just example to start scan after disconnect, most likely there is better way to do it in arduino
+  }
+
+  delay(5000); /* Delay between loops */
 }
