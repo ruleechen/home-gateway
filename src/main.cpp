@@ -8,7 +8,7 @@ using namespace Victor;
 using namespace Victor::Components;
 
 /* Specify the Service UUID of Server */
-static BLEUUID advertisingServiceUUID("0000abc0-0000-1000-8000-00805f9b34fb");
+static BLEUUID advertisingServiceUUID("00001002-0000-1000-8000-00805f9b34fb");
 static BLEScan* scan = nullptr;
 
 static std::vector<std::string> advertisedAddresses = {};
@@ -25,6 +25,7 @@ class AdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
       const auto address = advertisedDevice.getAddress().toString();
       if (clients.count(address) == 0) {
         const auto client = new VictorBleClient(new BLEAdvertisedDevice(advertisedDevice));
+        client->onReport = [](const VictorBleReport report) { Serial.println(report.rawReport); };
         advertisedAddresses.push_back(address);
         clients[address] = client;
         Serial.println("Created client for server [" + String(address.c_str()) + "]");
@@ -73,16 +74,5 @@ void loop() {
       Serial.println("Removed client [" + String(address.c_str()) + "]");
     }
     Serial.println("Clients [" + String(clients.size()) + "]");
-  }
-
-  if (now - lastHeartbeat > 30000) {
-    lastHeartbeat = now;
-    String message = "on" + String(now / 5000);
-    for (auto it = clients.begin(); it != clients.end(); ++it) {
-      const auto client = clients[it->first];
-      if (client->heartbeat(message)) {
-        Serial.print("Heartbeat server [" + String(it->first.c_str()) + "] [" + message + "]");
-      }
-    }
   }
 }
