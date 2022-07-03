@@ -12,6 +12,7 @@ namespace Victor::Components {
     VictorBleClient(BLEAdvertisedDevice* advertisedDevice);
     ~VictorBleClient();
     bool connectRemoteServer();
+    bool isConnected();
     bool heartbeat(const String message);
 
    private:

@@ -54,14 +54,20 @@ namespace Victor::Components {
     if (_remoteCharacteristicNotifiable != nullptr) {
       _remoteCharacteristicNotifiable->registerForNotify([](BLERemoteCharacteristic* remoteCharacteristic, uint8_t* data, size_t length, bool isNotify) {
         const auto dataStr = String(data, length);
-        if (dataStr == "hello") {
-          String newValue = "RuleeSmart";
-          remoteCharacteristic->writeValue(newValue.c_str(), newValue.length());
+        if (dataStr == "on0") {
+          Serial.println("state is off");
+        }
+        if (dataStr == "on1") {
+          Serial.println("state is on");
         }
       });
     }
 
     return success;
+  }
+
+  bool VictorBleClient::isConnected() {
+    return _client->isConnected();
   }
 
   bool VictorBleClient::heartbeat(const String message) {

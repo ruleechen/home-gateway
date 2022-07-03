@@ -11,8 +11,8 @@ using namespace Victor::Components;
 static BLEUUID advertisingServiceUUID("0000abc0-0000-1000-8000-00805f9b34fb");
 static BLEScan* scan = nullptr;
 
-static std::vector<BLEAddress> advertisedAddresses = {};
-static std::map<BLEAddress, VictorBleClient*> clients = {};
+static std::vector<std::string> advertisedAddresses = {};
+static std::map<std::string, VictorBleClient*> clients = {};
 
 class AdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
   void onResult(BLEAdvertisedDevice advertisedDevice) {
@@ -22,14 +22,19 @@ class AdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
       advertisedDevice.haveServiceUUID() &&
       advertisedDevice.isAdvertisingService(advertisingServiceUUID)
     ) {
-      const auto address = advertisedDevice.getAddress();
+      const auto address = advertisedDevice.getAddress().toString();
       if (clients.count(address) == 0) {
+        const auto client = new VictorBleClient(new BLEAdvertisedDevice(advertisedDevice));
         advertisedAddresses.push_back(address);
-        clients[address] = new VictorBleClient(new BLEAdvertisedDevice(advertisedDevice));
+        clients[address] = client;
+        Serial.println("Created client for server [" + String(address.c_str()) + "]");
       }
     }
   }
 };
+
+static unsigned long lastLoop = 0;
+static unsigned long lastHeartbeat = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -44,20 +49,40 @@ void setup() {
 }
 
 void loop() {
-  if (advertisedAddresses.size() > 0) {
-    for (auto it = advertisedAddresses.begin(); it != advertisedAddresses.end(); ++it) {
-      const auto client = clients[*it];
-      client->connectRemoteServer();
+  const auto now = millis();
+  if (now - lastLoop > 5000) {
+    lastLoop = now;
+    if (advertisedAddresses.size() > 0) {
+      for (auto address : advertisedAddresses) {
+        const auto client = clients[address];
+        client->connectRemoteServer();
+        Serial.println("Connecting server [" + String(address.c_str()) + "]");
+      }
+      advertisedAddresses.clear();
     }
-    advertisedAddresses.clear();
+
+    std::vector<std::string> disconnectedAddresses = {};
+    for (auto it = clients.begin(); it != clients.end(); ++it) {
+      const auto client = clients[it->first];
+      if (!client->isConnected()) {
+        disconnectedAddresses.push_back(it->first);
+      }
+    }
+    for (auto address : disconnectedAddresses) {
+      clients.erase(address);
+      Serial.println("Removed client [" + String(address.c_str()) + "]");
+    }
+    Serial.println("Clients [" + String(clients.size()) + "]");
   }
 
-  for (auto client = clients.begin(); client != clients.end(); ++client) {
-    String message = "Time since boot: " + String(millis() / 5000);
-    if (client->second->heartbeat(message)) {
-      Serial.println("Heartbeat message sent [" + message + "]");
+  if (now - lastHeartbeat > 30000) {
+    lastHeartbeat = now;
+    String message = "on" + String(now / 5000);
+    for (auto it = clients.begin(); it != clients.end(); ++it) {
+      const auto client = clients[it->first];
+      if (client->heartbeat(message)) {
+        Serial.print("Heartbeat server [" + String(it->first.c_str()) + "] [" + message + "]");
+      }
     }
   }
-
-  delay(5000);
 }
