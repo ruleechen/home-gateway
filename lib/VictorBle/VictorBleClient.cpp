@@ -31,7 +31,9 @@ namespace Victor::Components {
   bool VictorBleClient::connectRemoteServer() {
     _client = BLEDevice::createClient();
     const auto callbacks = new VictorBleClientCallbacks();
-    callbacks->onConnectivityChange = [&](BLEClient* client, bool connected) {};
+    callbacks->onConnectivityChange = [&](BLEClient* client, bool connected) {
+      Serial.println(connected ? "Connected" : "Disconnected");
+    };
     _client->setClientCallbacks(callbacks);
 
     const auto success = _client->connect(_advertisedDevice);
