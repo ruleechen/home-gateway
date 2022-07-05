@@ -23,22 +23,30 @@ void ec_app_ble_peripheral_set_ota_en(uint8_t p) //开启或关闭OTA 默认开�
   ec_core_sys_soft_reset();         //系统复位
 }
 
-static void heartbeat(void)
-{
-  if (ec_app_ble_on_state == 0)
-  {
-    ec_core_ble_send("HB:ON:0", 7); //串口数据转发到蓝牙
+static bool victor_start_with(uint8_t* data, uint8_t* find, uint8_t from) {
+  uint8_t i = 0;
+  while (data[i + from] == find[s]) { i++; }
+  return i == sizeof(find);
+}
+static void victor_emit_state() {
+  if (ec_app_ble_on_state == 0) {
+    ec_core_ble_send("ON:0", 4);
+  } else {
+    ec_core_ble_send("ON:1", 4);
   }
-  else
-  {
-    ec_core_ble_send("HB:ON:1", 7); //串口数据转发到蓝牙
+}
+static void victor_heartbeat(void) {
+  if (ec_app_ble_on_state == 0) {
+    ec_core_ble_send("HB:ON:0", 7);
+  } else {
+    ec_core_ble_send("HB:ON:1", 7);
   }
 }
 
 static void ec_app_ble_peripheral_connect_event(void) //蓝牙连接回调
 {
   ec_core_uart0_printf("ble peripheral connect\r\n");
-  ec_core_sw_timer_start(EC_CORE_SW_TIMER1, 30000, heartbeat); // heartbeat each 30s
+  ec_core_sw_timer_start(EC_CORE_SW_TIMER1, 30000, victor_heartbeat); // heartbeat each 30s
 }
 static void ec_app_ble_peripheral_disconnect_event(void) //蓝牙断开回调
 {
@@ -58,21 +66,17 @@ static void ec_app_ble_peripheral_receive_event(uint8_t *data, uint8_t len) //�
   ec_core_uart0_printf("ble peripheral receive len=%d\r\n", len);
   ec_core_uart_send(EC_CORE_UART0, data, len); //蓝牙数据转发到串口
   // ec_core_uart0_printf("\r\n");
-  if (data[0] == '@')
+  if (data[0] == '@') {
     ec_app_ble_peripheral_set_ota_en(1); //开启OTA
-  if (data[0] == '#')
+  }
+  if (data[0] == '#') {
     ec_app_ble_peripheral_set_ota_en(0); //关闭OTA
+  }
 
-  if (data[0] == 'o' && data[1] == 'n')
-  {
-    if (ec_app_ble_on_state == 0)
-    {
-      ec_core_ble_send("ON:0", 4); //串口数据转发到蓝牙
-    }
-    else
-    {
-      ec_core_ble_send("ON:1", 4); //串口数据转发到蓝牙
-    }
+  if (victor_start_with(data, 'QY', 0)) {
+    victor_emit_state();
+  } else if (victor_start_with(data, 'AM', 0)) {
+    ec_core_gpio_write(EC_CORE_GPIO_P8, EC_CORE_GPIO_LEVEL_L);
   }
 
   ec_core_sw_watchdog_feed(); //软件看门狗喂狗

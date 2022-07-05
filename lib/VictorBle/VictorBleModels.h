@@ -12,6 +12,12 @@ namespace Victor::Components {
     SERVER_NOTIFY_ON        = 3,
   };
 
+  enum ServerCommandType {
+    SERVER_COMMAND_NONE  = 0,
+    SERVER_COMMAND_QUERY = 1,
+    SERVER_COMMAND_ALARM = 2,
+  };
+
   struct ServerNotification {
     ServerNotifyType type;
     String args;
@@ -24,6 +30,20 @@ namespace Victor::Components {
         typeName = "PW";
       } else if (type == SERVER_NOTIFY_ON) {
         typeName = "ON";
+      }
+      return typeName + ":" + args;
+    }
+  };
+
+  struct ServerCommand {
+    ServerCommandType type;
+    String args;
+    String toStr() const {
+      auto typeName = String("NA");
+      if (type == SERVER_COMMAND_QUERY) {
+        typeName = "QY";
+      } else if (type == SERVER_COMMAND_ALARM) {
+        typeName = "AM";
       }
       return typeName + ":" + args;
     }

@@ -54,14 +54,7 @@ void report_handler()
   if (ec_app_ble_on_state != ec_app_ble_on_state_sent)
   {
     ec_app_ble_on_state_sent = ec_app_ble_on_state;
-    if (ec_app_ble_on_state == 0)
-    {
-      ec_core_ble_send("ON:0", 4); //串口数据转发到蓝牙
-    }
-    else
-    {
-      ec_core_ble_send("ON:1", 4); //串口数据转发到蓝牙
-    }
+    victor_emit_state();
   }
   ec_core_sw_timer_stop(EC_CORE_SW_TIMER2);
 }
@@ -103,8 +96,11 @@ int main(void)
   ec_core_ver(ver);                                                       //读取软件版本
   ec_core_uart0_printf("ECB02 SDK %d.%d.%d\r\n", ver[0], ver[1], ver[2]); //串口0 printf打印
 
-  ec_core_gpio_in_init(EC_CORE_GPIO_P3, EC_CORE_GPIO_PULL_UP_S);       // GPIO3 初始化 上拉输入
-  ec_core_gpio_int_register(EC_CORE_GPIO_P3, int_rising, int_falling); // GPIO3 中断使能
+  // input
+  ec_core_gpio_in_init(EC_CORE_GPIO_P7, EC_CORE_GPIO_PULL_UP_S);       // 初始化 上拉输入
+  ec_core_gpio_int_register(EC_CORE_GPIO_P7, int_rising, int_falling); // 中断使能
+  // output
+  ec_core_gpio_out_init(EC_CORE_GPIO_P8, EC_CORE_GPIO_PULL_UP_S);       // 初始化 上拉输出
 
   ec_core_sw_watchdog_init(EC_CORE_SW_TIMER6, 2, 3); //初始化软件看门狗，广播超时时间2分钟，蓝牙连接超时时间3分钟
 

@@ -32,7 +32,7 @@ namespace Victor::Components {
     ~VictorBleClient();
     bool connectServer();
     bool isConnected();
-    bool send(const String command);
+    bool send(const ServerCommand command);
     unsigned long lastHeartbeat = 0;
     typedef std::function<void(const ServerNotification* notification)> TNotifyHandler;
     TNotifyHandler onNotify = nullptr;
