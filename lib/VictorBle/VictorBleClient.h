@@ -30,12 +30,12 @@ namespace Victor::Components {
    public:
     VictorBleClient(BLEAdvertisedDevice* advertisedDevice);
     ~VictorBleClient();
-    bool connectRemoteServer();
+    bool connectServer();
     bool isConnected();
     bool send(const String command);
     unsigned long lastHeartbeat = 0;
-    typedef std::function<void(const VictorBleReport report)> TReportHandler;
-    TReportHandler onReport = nullptr;
+    typedef std::function<void(const ServerNotification* notification)> TNotifyHandler;
+    TNotifyHandler onNotify = nullptr;
 
    private:
     BLEAdvertisedDevice* _advertisedDevice = nullptr;
@@ -43,7 +43,7 @@ namespace Victor::Components {
     BLERemoteCharacteristic* _remoteCharacteristicReadable = nullptr;
     BLERemoteCharacteristic* _remoteCharacteristicWritable = nullptr;
     BLERemoteCharacteristic* _remoteCharacteristicNotifiable = nullptr;
-    static VictorBleReport _parseReport(String str);
+    static ServerNotification* _parseNotification(String str);
   };
 
 } // namespace Victor::Components

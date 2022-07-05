@@ -56,11 +56,11 @@ void report_handler()
     ec_app_ble_on_state_sent = ec_app_ble_on_state;
     if (ec_app_ble_on_state == 0)
     {
-      ec_core_ble_send("ST-ON-0", 7); //串口数据转发到蓝牙
+      ec_core_ble_send("ON:0", 4); //串口数据转发到蓝牙
     }
     else
     {
-      ec_core_ble_send("ST-ON-1", 7); //串口数据转发到蓝牙
+      ec_core_ble_send("ON:1", 4); //串口数据转发到蓝牙
     }
   }
   ec_core_sw_timer_stop(EC_CORE_SW_TIMER2);

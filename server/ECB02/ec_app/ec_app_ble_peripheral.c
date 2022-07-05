@@ -27,11 +27,11 @@ static void heartbeat(void)
 {
   if (ec_app_ble_on_state == 0)
   {
-    ec_core_ble_send("HB-ON-0", 7); //串口数据转发到蓝牙
+    ec_core_ble_send("HB:ON:0", 7); //串口数据转发到蓝牙
   }
   else
   {
-    ec_core_ble_send("HB-ON-1", 7); //串口数据转发到蓝牙
+    ec_core_ble_send("HB:ON:1", 7); //串口数据转发到蓝牙
   }
 }
 
@@ -67,11 +67,11 @@ static void ec_app_ble_peripheral_receive_event(uint8_t *data, uint8_t len) //�
   {
     if (ec_app_ble_on_state == 0)
     {
-      ec_core_ble_send("on0", 3); //串口数据转发到蓝牙
+      ec_core_ble_send("ON:0", 4); //串口数据转发到蓝牙
     }
     else
     {
-      ec_core_ble_send("on1", 3); //串口数据转发到蓝牙
+      ec_core_ble_send("ON:1", 4); //串口数据转发到蓝牙
     }
   }
 

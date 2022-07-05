@@ -5,17 +5,28 @@
 
 namespace Victor::Components {
 
-  enum VictorBleReportType {
-    BLE_REPORT_TYPE_NONE      = 0,
-    BLE_REPORT_TYPE_HEARTBEAT = 1,
-    BLE_REPORT_TYPE_POWER     = 2,
-    BLE_REPORT_TYPE_STATE     = 3,
+  enum ServerNotifyType {
+    SERVER_NOTIFY_NONE      = 0,
+    SERVER_NOTIFY_HEARTBEAT = 1,
+    SERVER_NOTIFY_POWER     = 2,
+    SERVER_NOTIFY_ON        = 3,
   };
 
-  struct VictorBleReport {
-    String rawReport = "";
-    VictorBleReportType type = BLE_REPORT_TYPE_NONE;
-    String value = "";
+  struct ServerNotification {
+    ServerNotifyType type;
+    String args;
+    ServerNotification* next;
+    String toStr() const {
+      auto typeName = String("NA");
+      if (type == SERVER_NOTIFY_HEARTBEAT) {
+        typeName = "HB";
+      } else if (type == SERVER_NOTIFY_POWER) {
+        typeName = "PW";
+      } else if (type == SERVER_NOTIFY_ON) {
+        typeName = "ON";
+      }
+      return typeName + ":" + args;
+    }
   };
 
 } // namespace Victor::Components

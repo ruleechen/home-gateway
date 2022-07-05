@@ -23,12 +23,12 @@ namespace Victor::Components {
       delete _remoteCharacteristicNotifiable;
       _remoteCharacteristicNotifiable = nullptr;
     }
-    if (onReport != nullptr) {
-      onReport = nullptr;
+    if (onNotify != nullptr) {
+      onNotify = nullptr;
     }
   }
 
-  bool VictorBleClient::connectRemoteServer() {
+  bool VictorBleClient::connectServer() {
     _client = BLEDevice::createClient();
     const auto callbacks = new VictorBleClientCallbacks();
     callbacks->onConnectivityChange = [&](BLEClient* client, bool connected) {
@@ -60,12 +60,12 @@ namespace Victor::Components {
     if (_remoteCharacteristicNotifiable != nullptr) {
       _remoteCharacteristicNotifiable->registerForNotify([&](BLERemoteCharacteristic* remoteCharacteristic, uint8_t* data, size_t length, bool isNotify) {
         const auto dataStr = String(data, length);
-        const auto report = _parseReport(dataStr);
-        if (report.type == BLE_REPORT_TYPE_HEARTBEAT) {
+        const auto notification = _parseNotification(dataStr);
+        if (notification->type == SERVER_NOTIFY_HEARTBEAT) {
           lastHeartbeat = millis();
         }
-        if (onReport != nullptr) {
-          onReport(report);
+        if (onNotify != nullptr) {
+          onNotify(notification);
         }
       });
     }
@@ -86,20 +86,28 @@ namespace Victor::Components {
     return sent;
   }
 
-  VictorBleReport VictorBleClient::_parseReport(String str) {
-    const auto type  = str.substring(0, 2);
-    const auto value = str.substring(3);
-    VictorBleReport report = {};
-    report.rawReport = str;
-    if (type == "HB") {
-      report.type = BLE_REPORT_TYPE_HEARTBEAT;
-    } else if (type == "PW") {
-      report.type = BLE_REPORT_TYPE_POWER;
-    } else if (type == "ST") {
-      report.type = BLE_REPORT_TYPE_STATE;
+  ServerNotification* VictorBleClient::_parseNotification(String str) {
+    auto code = str.substring(0, 2);
+    auto args = str.substring(3);
+    auto type = SERVER_NOTIFY_NONE;
+    if (code == "HB") {
+      type = SERVER_NOTIFY_HEARTBEAT;
+    } else if (code == "PW") {
+      type = SERVER_NOTIFY_POWER;
+    } else if (code == "ON") {
+      type = SERVER_NOTIFY_ON;
     }
-    report.value = value;
-    return report;
+    if (type == SERVER_NOTIFY_NONE) {
+      return nullptr;
+    }
+    auto next = _parseNotification(args);
+    ServerNotification notification = {
+      type = type,
+      args = args,
+      next  = next,
+    };
+    const auto pNotify = &notification;
+    return pNotify;
   }
 
 } // namespace Victor::Components
