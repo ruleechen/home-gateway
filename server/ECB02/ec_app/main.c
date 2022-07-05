@@ -19,65 +19,51 @@
 
 #define EC_APP_UART0_TX_BUF_SIZE 1024                 //串口0发送缓冲区大小，可以根据需要调整
 #define EC_APP_UART0_RX_BUF_SIZE 1024                 //串口0接收缓冲区大小，可以根据需要调整
-#define EC_APP_UART1_TX_BUF_SIZE 1024                 //串口1发送缓冲区大小，可以根据需要调整
-#define EC_APP_UART1_RX_BUF_SIZE 1024                 //串口1接收缓冲区大小，可以根据需要调整
 uint8_t uart0_tx_buf[EC_APP_UART0_TX_BUF_SIZE] = {0}; //串口0发送缓冲区
 uint8_t uart0_rx_buf[EC_APP_UART0_RX_BUF_SIZE] = {0}; //串口0接收缓冲区
-uint8_t uart1_tx_buf[EC_APP_UART1_TX_BUF_SIZE] = {0}; //串口1发送缓冲区
-uint8_t uart1_rx_buf[EC_APP_UART1_RX_BUF_SIZE] = {0}; //串口1接收缓冲区
 
-void uart0_rx(uint8_t *buf, uint16_t len)
-{
+void uart0_rx(uint8_t *buf, uint16_t len) {
   ec_core_ble_send(buf, len); //串口数据转发到蓝牙
 
-  if (strcmp((const char *)buf, "DISC") == 0)
+  if (strcmp((const char *)buf, "DISC") == 0) {
     ec_core_ble_disconnect(); //主动断开蓝牙连接
+  }
 }
 
-void uart1_rx(uint8_t *buf, uint16_t len) //串口1接收数据中断
-{
-  ec_core_ble_send(buf, len); //串口数据转发到蓝牙
-}
-
-void uart1_init(void) //串口1初始化 波特率精度受时钟频率影响
-{
-  ec_core_uart_init(EC_CORE_UART1, 115200, EC_CORE_UART_PARITY_NONE,
-                    EC_CORE_GPIO_P2, EC_CORE_GPIO_P1,
-                    uart1_tx_buf, EC_APP_UART1_TX_BUF_SIZE, uart1_rx_buf, EC_APP_UART1_RX_BUF_SIZE,
-                    uart1_rx);
+void uart0_init(void) {
+  ec_core_uart_init(EC_CORE_UART0, 115200, EC_CORE_UART_PARITY_NONE,
+                    EC_CORE_GPIO_P1, EC_CORE_GPIO_P2,
+                    uart0_tx_buf, EC_APP_UART0_TX_BUF_SIZE, uart0_rx_buf, EC_APP_UART0_RX_BUF_SIZE,
+                    uart0_rx);
 }
 
 uint8_t ec_app_ble_on_state_sent = 0;
 
-void report_handler()
-{
-  if (ec_app_ble_on_state != ec_app_ble_on_state_sent)
-  {
+void victor_debounce_handler() {
+  if (ec_app_ble_on_state != ec_app_ble_on_state_sent) {
     ec_app_ble_on_state_sent = ec_app_ble_on_state;
     victor_emit_state();
   }
   ec_core_sw_timer_stop(EC_CORE_SW_TIMER2);
 }
-void report_state(uint8_t state)
-{
-  ec_app_ble_on_state = state;
-  // debounce 100ms
+void victor_debounce_emit() {
   ec_core_sw_timer_stop(EC_CORE_SW_TIMER2);
-  ec_core_sw_timer_start(EC_CORE_SW_TIMER2, 100, report_handler);
+  ec_core_sw_timer_start(EC_CORE_SW_TIMER2, 100, victor_debounce_handler);
 }
-void int_rising(void) //上升沿中断
-{
-  ec_core_uart0_printf("int_rising\r\n");
-  report_state(0);
+void victor_set_state(uint8_t state) {
+  ec_app_ble_on_state = state;
+  victor_debounce_emit();
 }
-void int_falling(void) //下降沿中断
-{
-  ec_core_uart0_printf("int_falling\r\n");
-  report_state(1);
+void input_rising(void) {
+  ec_core_uart0_printf("input_rising\r\n");
+  victor_set_state(0);
+}
+void input_falling(void) {
+  ec_core_uart0_printf("input_falling\r\n");
+  victor_set_state(1);
 }
 
-int main(void)
-{
+int main(void) {
   ec_core_sys_clk_set(EC_CORE_SYS_CLK_48M); //配置系统时钟
 
   ec_app_flash_sys_param_read(); // 从flash读取系统参数
@@ -85,20 +71,16 @@ int main(void)
 
   ec_core_init(); //蓝牙内核初始化
 
-  //串口0初始化 波特率精度受时钟频率影响
-  ec_core_uart_init(EC_CORE_UART0, 115200, EC_CORE_UART_PARITY_NONE,
-                    EC_CORE_GPIO_P4, EC_CORE_GPIO_P5,
-                    uart0_tx_buf, EC_APP_UART0_TX_BUF_SIZE, uart0_rx_buf, EC_APP_UART0_RX_BUF_SIZE,
-                    uart0_rx);
-  uart1_init();
+  uart0_init();
 
   uint8_t ver[3] = {0};
   ec_core_ver(ver);                                                       //读取软件版本
   ec_core_uart0_printf("ECB02 SDK %d.%d.%d\r\n", ver[0], ver[1], ver[2]); //串口0 printf打印
 
   // input
-  ec_core_gpio_in_init(EC_CORE_GPIO_P7, EC_CORE_GPIO_PULL_UP_S);       // 初始化 上拉输入
-  ec_core_gpio_int_register(EC_CORE_GPIO_P7, int_rising, int_falling); // 中断使能
+  ec_core_gpio_in_init(EC_CORE_GPIO_P7, EC_CORE_GPIO_PULL_UP_S);           // 初始化 上拉输入
+  ec_core_gpio_int_register(EC_CORE_GPIO_P7, input_rising, input_falling); // 中断使能
+
   // output
   ec_core_gpio_out_init(EC_CORE_GPIO_P8, EC_CORE_GPIO_PULL_UP_S);       // 初始化 上拉输出
 
