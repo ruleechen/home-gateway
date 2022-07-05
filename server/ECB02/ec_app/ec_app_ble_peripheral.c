@@ -17,12 +17,12 @@ void ec_app_ble_peripheral_set_ota_en(uint8_t p) { //开启或关闭OTA 默认�
   ec_core_sys_soft_reset();                        //系统复位
 }
 
-static uint8_t victor_start_with(uint8_t* data, uint8_t* find, uint8_t from) {
+static uint8_t victor_start_with(uint8_t* data, uint8_t from, uint8_t* find, uint8_t len) {
   uint8_t i = 0;
   while (data[i + from] == find[i]) {
     i++;
   }
-  return i == sizeof(find) ? 1 : 0;
+  return i == len ? 1 : 0;
 }
 
 void victor_emit_state(void) {
@@ -71,9 +71,9 @@ static void ec_app_ble_peripheral_receive_event(uint8_t* data, uint8_t len) { //
     ec_app_ble_peripheral_set_ota_en(0); //关闭OTA
   }
 
-  if (victor_start_with(data, "QY", 0)) { // QUERY
+  if (victor_start_with(data, 0, "QY", 2)) { // QUERY
     victor_emit_state();
-  } else if (victor_start_with(data, "AM", 0)) { // ALARM
+  } else if (victor_start_with(data, 0, "AM", 2)) { // ALARM
     ec_core_gpio_write(EC_CORE_GPIO_P8, (data[3] == '1' ? EC_CORE_GPIO_LEVEL_L : EC_CORE_GPIO_LEVEL_H));
   }
 
