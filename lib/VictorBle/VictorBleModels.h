@@ -21,7 +21,6 @@ namespace Victor::Components {
   struct ServerNotification {
     ServerNotifyType type;
     String args;
-    ServerNotification* next;
     String toStr() const {
       auto typeName = String("NA");
       if (type == SERVER_NOTIFY_HEARTBEAT) {

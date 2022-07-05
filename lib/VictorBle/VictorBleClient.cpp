@@ -61,7 +61,7 @@ namespace Victor::Components {
       _remoteCharacteristicNotifiable->registerForNotify([&](BLERemoteCharacteristic* remoteCharacteristic, uint8_t* data, size_t length, bool isNotify) {
         const auto dataStr = String(data, length);
         const auto notification = _parseNotification(dataStr);
-        if (notification->type == SERVER_NOTIFY_HEARTBEAT) {
+        if (notification.type == SERVER_NOTIFY_HEARTBEAT) {
           lastHeartbeat = millis();
         }
         if (onNotify != nullptr) {
@@ -87,7 +87,7 @@ namespace Victor::Components {
     return sent;
   }
 
-  ServerNotification* VictorBleClient::_parseNotification(String str) {
+  ServerNotification VictorBleClient::_parseNotification(String str) {
     auto code = str.substring(0, 2);
     auto args = str.substring(3);
     auto type = SERVER_NOTIFY_NONE;
@@ -98,17 +98,11 @@ namespace Victor::Components {
     } else if (code == "ON") {
       type = SERVER_NOTIFY_ON;
     }
-    if (type == SERVER_NOTIFY_NONE) {
-      return nullptr;
-    }
-    auto next = _parseNotification(args);
     ServerNotification notification = {
       type = type,
       args = args,
-      next  = next,
     };
-    const auto pNotify = &notification;
-    return pNotify;
+    return notification;
   }
 
 } // namespace Victor::Components

@@ -34,7 +34,7 @@ namespace Victor::Components {
     bool isConnected();
     bool send(const ServerCommand command);
     unsigned long lastHeartbeat = 0;
-    typedef std::function<void(const ServerNotification* notification)> TNotifyHandler;
+    typedef std::function<void(const ServerNotification notification)> TNotifyHandler;
     TNotifyHandler onNotify = nullptr;
 
    private:
@@ -43,7 +43,7 @@ namespace Victor::Components {
     BLERemoteCharacteristic* _remoteCharacteristicReadable = nullptr;
     BLERemoteCharacteristic* _remoteCharacteristicWritable = nullptr;
     BLERemoteCharacteristic* _remoteCharacteristicNotifiable = nullptr;
-    static ServerNotification* _parseNotification(String str);
+    static ServerNotification _parseNotification(String str);
   };
 
 } // namespace Victor::Components
