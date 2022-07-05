@@ -21,18 +21,15 @@ void uart0_rx(uint8_t *buf, uint16_t len) {
 }
 
 void uart0_init(void) {
-  ec_core_uart_init(EC_CORE_UART0, 115200, EC_CORE_UART_PARITY_NONE,
-                    EC_CORE_GPIO_P1, EC_CORE_GPIO_P2,
-                    uart0_tx_buf, EC_APP_UART0_TX_BUF_SIZE, uart0_rx_buf, EC_APP_UART0_RX_BUF_SIZE,
-                    uart0_rx);
+  ec_core_uart_init(EC_CORE_UART0, 115200, EC_CORE_UART_PARITY_NONE, EC_CORE_GPIO_P1, EC_CORE_GPIO_P2, uart0_tx_buf, EC_APP_UART0_TX_BUF_SIZE, uart0_rx_buf, EC_APP_UART0_RX_BUF_SIZE, uart0_rx);
 }
 
 void victor_debounce_handler() {
+  ec_core_sw_timer_stop(EC_CORE_SW_TIMER2);
   if (victor_on_state != victor_on_state_sent) {
     victor_on_state_sent = victor_on_state;
     victor_emit_state();
   }
-  ec_core_sw_timer_stop(EC_CORE_SW_TIMER2);
 }
 
 void victor_debounce_emit() {
@@ -74,7 +71,7 @@ int main(void) {
   ec_core_gpio_int_register(EC_CORE_GPIO_P7, input_rising, input_falling); // 中断使能
 
   // output
-  ec_core_gpio_out_init(EC_CORE_GPIO_P8, EC_CORE_GPIO_PULL_UP_S);       // 初始化 上拉输出
+  ec_core_gpio_out_init(EC_CORE_GPIO_P8, EC_CORE_GPIO_LEVEL_H); // 初始化 上拉输出
 
   ec_core_sw_watchdog_init(EC_CORE_SW_TIMER6, 2, 3); //初始化软件看门狗，广播超时时间2分钟，蓝牙连接超时时间3分钟
 
