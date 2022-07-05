@@ -49,6 +49,8 @@ void setup() {
   scan->start(5, true);
 }
 
+static bool alarmOnState = false;
+
 void loop() {
   const auto now = millis();
   if (now - lastLoop > 5000) {
@@ -65,14 +67,19 @@ void loop() {
     std::vector<std::string> disconnectedAddresses = {};
     for (auto it = clients.begin(); it != clients.end(); ++it) {
       const auto client = clients[it->first];
+      client->send({
+        .type = SERVER_COMMAND_ALARM,
+        .args = alarmOnState ? "1" : "0",
+      });
+      alarmOnState = !alarmOnState;
       if (!client->isConnected()) {
         disconnectedAddresses.push_back(it->first);
       }
     }
-    for (auto address : disconnectedAddresses) {
-      clients.erase(address);
-      Serial.println("Removed client [" + String(address.c_str()) + "]");
-    }
+    // for (auto address : disconnectedAddresses) {
+    //   clients.erase(address);
+    //   Serial.println("Removed client [" + String(address.c_str()) + "]");
+    // }
     Serial.println("Clients [" + String(clients.size()) + "]");
   }
 }

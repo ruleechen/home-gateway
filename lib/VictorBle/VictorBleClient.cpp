@@ -99,8 +99,8 @@ namespace Victor::Components {
       type = SERVER_NOTIFY_ON;
     }
     ServerNotification notification = {
-      type = type,
-      args = args,
+      .type = type,
+      .args = args,
     };
     return notification;
   }
