@@ -1,13 +1,3 @@
-/******************************************************************************
- *  Copyright © 2019 Shenzhen ECIOT Technology Co., Ltd All Rights Reserved
- *-----------------------------------------------------------------------------
- * @file        ec_app_flash.h
- * @brief       flash control
- * @author      mo@eciot.cn (qq:2201920828,v:eciot_mo)
- * @date        2022-02-13
- * @version     1.0
- ******************************************************************************/
-
 #ifndef __EC_APP_FLASH_H__
 #define __EC_APP_FLASH_H__
 

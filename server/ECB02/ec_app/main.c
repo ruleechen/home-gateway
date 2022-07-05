@@ -1,13 +1,3 @@
-/******************************************************************************
- *  Copyright © 2019 Shenzhen ECIOT Technology Co., Ltd All Rights Reserved
- *-----------------------------------------------------------------------------
- * @file        main.c
- * @brief       app demo
- * @author      mo@eciot.cn (qq:2201920828,v:eciot_mo)
- * @date        2022-02-13
- * @version     1.0
- ******************************************************************************/
-
 #include "main.h"
 
 #ifdef EC_APP_MAIN
@@ -37,27 +27,29 @@ void uart0_init(void) {
                     uart0_rx);
 }
 
-uint8_t ec_app_ble_on_state_sent = 0;
-
 void victor_debounce_handler() {
-  if (ec_app_ble_on_state != ec_app_ble_on_state_sent) {
-    ec_app_ble_on_state_sent = ec_app_ble_on_state;
+  if (victor_on_state != victor_on_state_sent) {
+    victor_on_state_sent = victor_on_state;
     victor_emit_state();
   }
   ec_core_sw_timer_stop(EC_CORE_SW_TIMER2);
 }
+
 void victor_debounce_emit() {
   ec_core_sw_timer_stop(EC_CORE_SW_TIMER2);
   ec_core_sw_timer_start(EC_CORE_SW_TIMER2, 100, victor_debounce_handler);
 }
+
 void victor_set_state(uint8_t state) {
-  ec_app_ble_on_state = state;
+  victor_on_state = state;
   victor_debounce_emit();
 }
+
 void input_rising(void) {
   ec_core_uart0_printf("input_rising\r\n");
   victor_set_state(0);
 }
+
 void input_falling(void) {
   ec_core_uart0_printf("input_falling\r\n");
   victor_set_state(1);

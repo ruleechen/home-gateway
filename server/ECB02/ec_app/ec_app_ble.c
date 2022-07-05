@@ -1,18 +1,7 @@
-/******************************************************************************
- *  Copyright © 2019 Shenzhen ECIOT Technology Co., Ltd All Rights Reserved
- *-----------------------------------------------------------------------------
- * @file        ec_app_ble.c
- * @brief       ble control
- * @author      mo@eciot.cn (qq:2201920828,v:eciot_mo)
- * @date        2022-02-13
- * @version     1.0
- ******************************************************************************/
-
 #include "ec_core.h"
 #include "ec_app_ble_peripheral.h"
 
-void ec_app_ble_param_init(void) //蓝牙参数初始化
-{
+void ec_app_ble_param_init(void) { //蓝牙参数初始化
   // ec_core_ble_set_power(EC_CORE_BLE_POWER_3DBM);//配置发射功率，默认3dbm
   // ec_core_set_role(EC_CORE_BLE_ROLE_PERIPHERAL); //默认从机，PERIPHERAL
 
