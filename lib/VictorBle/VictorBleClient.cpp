@@ -60,8 +60,8 @@ namespace Victor::Components {
     if (_remoteCharacteristicNotifiable != nullptr) {
       _remoteCharacteristicNotifiable->registerForNotify([&](BLERemoteCharacteristic* remoteCharacteristic, uint8_t* data, size_t length, bool isNotify) {
         const auto dataStr = String(data, length);
-        const auto notification = _parseNotification(dataStr);
-        if (notification.type == SERVER_NOTIFY_HEARTBEAT) {
+        const auto notification = parseNotification(dataStr);
+        if (notification->type == SERVER_NOTIFY_HEARTBEAT) {
           lastHeartbeat = millis();
         }
         if (onNotify != nullptr) {
@@ -80,28 +80,41 @@ namespace Victor::Components {
   bool VictorBleClient::send(const ServerCommand command) {
     auto sent = false;
     if (_client->isConnected() && _remoteCharacteristicWritable != nullptr) {
-      const auto message = command.toStr();
+      const auto message = command.serialize();
       _remoteCharacteristicWritable->writeValue(message.c_str(), message.length());
       sent = true;
     }
     return sent;
   }
 
-  ServerNotification VictorBleClient::_parseNotification(String str) {
-    auto code = str.substring(0, 2);
-    auto args = str.substring(3);
-    auto type = SERVER_NOTIFY_NONE;
+  ServerNotifyType VictorBleClient::parseNotifyType(const String& code) {
     if (code == "HB") {
-      type = SERVER_NOTIFY_HEARTBEAT;
+      return SERVER_NOTIFY_HEARTBEAT;
     } else if (code == "PW") {
-      type = SERVER_NOTIFY_POWER;
+      return SERVER_NOTIFY_POWER;
     } else if (code == "ON") {
-      type = SERVER_NOTIFY_ON;
+      return SERVER_NOTIFY_ON;
     }
-    ServerNotification notification = {
+    return SERVER_NOTIFY_NONE;
+  }
+
+  ServerNotification* VictorBleClient::parseNotification(const String& str) {
+    // split
+    const auto code = str.substring(0, 2);
+    const auto args = str.substring(3);
+    // type
+    const auto type = parseNotifyType(code);
+    if (type == SERVER_NOTIFY_NONE) {
+      return nullptr;
+    }
+    // struct
+    const auto next = parseNotification(args);
+    const auto notification = new ServerNotification({
       .type = type,
       .args = args,
-    };
+      .raw  = str,
+      .next = next,
+    });
     return notification;
   }
 

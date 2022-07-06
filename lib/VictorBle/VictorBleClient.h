@@ -33,8 +33,10 @@ namespace Victor::Components {
     bool connectServer();
     bool isConnected();
     bool send(const ServerCommand command);
+    static ServerNotifyType parseNotifyType(const String& str);
+    static ServerNotification* parseNotification(const String& str);
     unsigned long lastHeartbeat = 0;
-    typedef std::function<void(const ServerNotification notification)> TNotifyHandler;
+    typedef std::function<void(const ServerNotification* notification)> TNotifyHandler;
     TNotifyHandler onNotify = nullptr;
 
    private:
@@ -43,7 +45,6 @@ namespace Victor::Components {
     BLERemoteCharacteristic* _remoteCharacteristicReadable = nullptr;
     BLERemoteCharacteristic* _remoteCharacteristicWritable = nullptr;
     BLERemoteCharacteristic* _remoteCharacteristicNotifiable = nullptr;
-    static ServerNotification _parseNotification(String str);
   };
 
 } // namespace Victor::Components

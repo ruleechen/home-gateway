@@ -21,23 +21,14 @@ namespace Victor::Components {
   struct ServerNotification {
     ServerNotifyType type;
     String args;
-    String toStr() const {
-      auto typeName = String("NA");
-      if (type == SERVER_NOTIFY_HEARTBEAT) {
-        typeName = "HB";
-      } else if (type == SERVER_NOTIFY_POWER) {
-        typeName = "PW";
-      } else if (type == SERVER_NOTIFY_ON) {
-        typeName = "ON";
-      }
-      return typeName + ":" + args;
-    }
+    String raw;
+    ServerNotification* next;
   };
 
   struct ServerCommand {
     ServerCommandType type;
     String args;
-    String toStr() const {
+    String serialize() const {
       auto typeName = String("NA");
       if (type == SERVER_COMMAND_QUERY) {
         typeName = "QY";

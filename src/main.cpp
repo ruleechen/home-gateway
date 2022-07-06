@@ -25,7 +25,13 @@ class AdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
       const auto address = advertisedDevice.getAddress().toString();
       if (clients.count(address) == 0) {
         const auto client = new VictorBleClient(new BLEAdvertisedDevice(advertisedDevice));
-        client->onNotify = [](const ServerNotification notification) { Serial.println(notification.toStr()); };
+        client->onNotify = [](const ServerNotification* notification) {
+          auto item = notification;
+          while (item != nullptr && item->type) {
+            Serial.println(item->raw);
+            item = item->next;
+          }
+        };
         advertisedAddresses.push_back(address);
         clients[address] = client;
         Serial.println("Created client for server [" + String(address.c_str()) + "]");
