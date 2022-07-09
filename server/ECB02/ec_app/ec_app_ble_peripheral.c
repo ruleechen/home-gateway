@@ -5,7 +5,7 @@ ec_core_gpio_pin_e vic_gpio_uart_tx = EC_CORE_GPIO_P1; // UART0 tx pin
 ec_core_gpio_pin_e vic_gpio_uart_rx = EC_CORE_GPIO_P2; // UART0 rx pin
 ec_core_gpio_pin_e vic_gpio_input = EC_CORE_GPIO_P3;   // switch on/off input pin
 ec_core_gpio_pin_e vic_gpio_output = EC_CORE_GPIO_P4;  // alarm on/off output pin
-ec_core_adc_ch_e vic_gpio_adc = EC_CORE_ADC_CH4_P10;   // power detection
+ec_core_adc_ch_e vic_gpio_adc = EC_CORE_ADC_CH4_P10;   // battery detection
 
 // 1: 允许通过蓝牙无线升级程序
 // 0: 禁止无线升级程序，需要重新上电，拉高BOOT引脚才能进入下载模式
@@ -27,82 +27,93 @@ void ec_app_ble_peripheral_set_ota_en(uint8_t p) { //开启或关闭OTA 默认�
   ec_core_sys_soft_reset();                        //系统复位
 }
 
-static void vic_measure_power(void) {
+static void vic_measure_battery(void) {
   uint16_t value, voltage; //寄存器值和电压值
   ec_core_adc_get(vic_gpio_adc, EC_CORE_ADC_RANGE_3200MV, EC_CORE_ADC_CALIBRATION_ENABLED, &value, &voltage);
   vic_adc_value = value;
   vic_adc_voltage = voltage;
 }
 
-static uint8_t vic_start_with(uint8_t* data, uint8_t from, uint8_t* find, uint8_t len) {
+static uint8_t vic_start_with(uint8_t* data, uint8_t from, char* find) {
   uint8_t i = 0;
   while (data[i + from] == find[i]) {
     i++;
   }
-  return i == len ? 1 : 0;
+  return i == strlen(find) ? 1 : 0;
+}
+
+static void vic_uart_emit(uint8_t* title, uint8_t* data, uint16_t len) {
+  ec_core_uart0_printf("%s [", title);
+  ec_core_uart_send(EC_CORE_UART0, data, len); //蓝牙数据转发到串口
+  ec_core_uart0_printf("]\r\n");
+}
+
+static void vic_ble_emit(uint8_t* data, uint16_t len) {
+  ec_core_ble_send(data, len);
+  vic_uart_emit("ble peripheral emit", data, len);
 }
 
 // https://www.runoob.com/cprogramming/c-function-sprintf.html
-void vic_emit_power(void) {
-  char buf[25] = {0};
-  sprintf(buf, "PW:%u", vic_adc_value);
-  ec_core_ble_send((uint8_t*)buf, 25);
-}
-
-void vic_emit_state(void) {
-  char buf[4] = {0};
-  sprintf(buf, "ON:%s", vic_on_state ? "1" : "0");
-  ec_core_ble_send((uint8_t*)buf, 4);
-}
-
-void vic_emit_heartbeat(void) {
+static void vic_emit_battery_state(void) {
   char buf[7] = {0};
-  sprintf(buf, "HB:ON:%s", vic_on_state ? "1" : "0");
-  ec_core_ble_send((uint8_t*)buf, 7);
+  sprintf(buf, "BT:%04d", vic_adc_voltage);
+  vic_ble_emit((uint8_t*)buf, 7);
+}
+
+void vic_emit_on_state(void) {
+  if (vic_on_state == 0) {
+    vic_ble_emit("ON:0", 4);
+  } else {
+    vic_ble_emit("ON:1", 4);
+  }
+}
+
+static void vic_emit_heartbeat_state(void) {
+  if (vic_on_state == 0) {
+    vic_ble_emit("HB:ON:0", 7);
+  } else {
+    vic_ble_emit("HB:ON:1", 7);
+  }
 }
 
 static void vic_heartbeat(void) {
-  vic_measure_power();
-  vic_emit_power();
-  vic_emit_heartbeat();
+  vic_measure_battery();
+  vic_emit_battery_state();
+  vic_emit_heartbeat_state();
 }
 
 static void ec_app_ble_peripheral_connect_event(void) { //蓝牙连接回调
+  vic_measure_battery();
   ec_core_uart0_printf("ble peripheral connect\r\n");
-  ec_core_sw_timer_stop(EC_CORE_SW_TIMER1);
-  ec_core_sw_timer_start(EC_CORE_SW_TIMER1, 30000, vic_heartbeat); // heartbeat each 30s
 }
 
 static void ec_app_ble_peripheral_disconnect_event(void) { //蓝牙断开回调
-  ec_core_uart0_printf("ble peripheral disconnect\r\n");
   ec_core_sw_timer_stop(EC_CORE_SW_TIMER1);
+  ec_core_uart0_printf("ble peripheral disconnect\r\n");
 }
 
 static void ec_app_ble_peripheral_notify_enable_event(void) { //蓝牙订阅打开回调
+  ec_core_sw_timer_stop(EC_CORE_SW_TIMER1);
+  ec_core_sw_timer_start(EC_CORE_SW_TIMER1, 30000, vic_heartbeat); // heartbeat each 30s
   ec_core_uart0_printf("ble peripheral notify enable\r\n");
 }
 
 static void ec_app_ble_peripheral_notify_disable_event(void) { //蓝牙订阅关闭回调
+  ec_core_sw_timer_stop(EC_CORE_SW_TIMER1);
   ec_core_uart0_printf("ble peripheral notify disable\r\n");
 }
 
 static void ec_app_ble_peripheral_receive_event(uint8_t* data, uint8_t len) { //蓝牙数据接收回调
-  ec_core_uart0_printf("ble peripheral receive len=%d\r\n", len);
-  ec_core_uart_send(EC_CORE_UART0, data, len); //蓝牙数据转发到串口
-  // ec_core_uart0_printf("\r\n");
+  vic_uart_emit("ble peripheral receive", data, len);
 
-  if (data[0] == '@') {
-    ec_app_ble_peripheral_set_ota_en(1); //开启OTA
-  } else if (data[0] == '#') {
-    ec_app_ble_peripheral_set_ota_en(0); //关闭OTA
-  }
-
-  if (vic_start_with(data, 0, "ON", 2)) { // QUERY_ON
-    vic_emit_state();
-  } else if (vic_start_with(data, 0, "PW", 2)) { // QUERY_POWER
-    vic_emit_power();
-  } else if (vic_start_with(data, 0, "AM", 2)) { // SET_ALARM
+  if (vic_start_with(data, 0, "ON")) { // QUERY_ON
+    vic_emit_on_state();
+  } else if (vic_start_with(data, 0, "BT")) { // QUERY_BATTERY
+    vic_emit_battery_state();
+  } else if (vic_start_with(data, 0, "AM")) { // SET_ALARM
     ec_core_gpio_write(vic_gpio_output, (data[3] == '1' ? EC_CORE_GPIO_LEVEL_L : EC_CORE_GPIO_LEVEL_H));
+  } else if (vic_start_with(data, 0, "OTA")) { // SET_OTA
+    ec_app_ble_peripheral_set_ota_en(data[4] == '1' ? 1 : 0);
   }
 
   ec_core_sw_watchdog_feed(); //软件看门狗喂狗

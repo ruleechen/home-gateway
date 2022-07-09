@@ -28,7 +28,7 @@ void vic_debounce_handler() {
   ec_core_sw_timer_stop(EC_CORE_SW_TIMER2);
   if (vic_on_state != vic_on_state_sent) {
     vic_on_state_sent = vic_on_state;
-    vic_emit_state();
+    vic_emit_on_state();
   }
 }
 
@@ -37,20 +37,14 @@ void vic_debounce_emit() {
   ec_core_sw_timer_start(EC_CORE_SW_TIMER2, 100, vic_debounce_handler);
 }
 
-void vic_set_state(uint8_t state) {
+void vic_set_on_state(uint8_t state) {
   vic_on_state = state;
   vic_debounce_emit();
 }
 
-void input_rising(void) {
-  ec_core_uart0_printf("input_rising\r\n");
-  vic_set_state(0);
-}
+void input_rising(void) { vic_set_on_state(0); }
 
-void input_falling(void) {
-  ec_core_uart0_printf("input_falling\r\n");
-  vic_set_state(1);
-}
+void input_falling(void) { vic_set_on_state(1); }
 
 int main(void) {
   ec_core_sys_clk_set(EC_CORE_SYS_CLK_48M); //配置系统时钟
