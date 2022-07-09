@@ -6,7 +6,6 @@
 #include "ec_app_flash.h"
 #include "ec_app_ble_peripheral.h"
 #include "ec_app_ble.h"
-#include "victor_gpio_config.h"
 
 #define EC_APP_UART0_TX_BUF_SIZE 1024                 //串口0发送缓冲区大小，可以根据需要调整
 #define EC_APP_UART0_RX_BUF_SIZE 1024                 //串口0接收缓冲区大小，可以根据需要调整
@@ -22,35 +21,35 @@ void uart0_rx(uint8_t *buf, uint16_t len) {
 }
 
 void uart0_init(void) {
-  ec_core_uart_init(EC_CORE_UART0, 115200, EC_CORE_UART_PARITY_NONE, victor_gpio_uart_tx, victor_gpio_uart_rx, uart0_tx_buf, EC_APP_UART0_TX_BUF_SIZE, uart0_rx_buf, EC_APP_UART0_RX_BUF_SIZE, uart0_rx);
+  ec_core_uart_init(EC_CORE_UART0, 115200, EC_CORE_UART_PARITY_NONE, vic_gpio_uart_tx, vic_gpio_uart_rx, uart0_tx_buf, EC_APP_UART0_TX_BUF_SIZE, uart0_rx_buf, EC_APP_UART0_RX_BUF_SIZE, uart0_rx);
 }
 
-void victor_debounce_handler() {
+void vic_debounce_handler() {
   ec_core_sw_timer_stop(EC_CORE_SW_TIMER2);
-  if (victor_on_state != victor_on_state_sent) {
-    victor_on_state_sent = victor_on_state;
-    victor_emit_state();
+  if (vic_on_state != vic_on_state_sent) {
+    vic_on_state_sent = vic_on_state;
+    vic_emit_state();
   }
 }
 
-void victor_debounce_emit() {
+void vic_debounce_emit() {
   ec_core_sw_timer_stop(EC_CORE_SW_TIMER2);
-  ec_core_sw_timer_start(EC_CORE_SW_TIMER2, 100, victor_debounce_handler);
+  ec_core_sw_timer_start(EC_CORE_SW_TIMER2, 100, vic_debounce_handler);
 }
 
-void victor_set_state(uint8_t state) {
-  victor_on_state = state;
-  victor_debounce_emit();
+void vic_set_state(uint8_t state) {
+  vic_on_state = state;
+  vic_debounce_emit();
 }
 
 void input_rising(void) {
   ec_core_uart0_printf("input_rising\r\n");
-  victor_set_state(0);
+  vic_set_state(0);
 }
 
 void input_falling(void) {
   ec_core_uart0_printf("input_falling\r\n");
-  victor_set_state(1);
+  vic_set_state(1);
 }
 
 int main(void) {
@@ -69,11 +68,11 @@ int main(void) {
   ec_core_uart0_printf("ECB02 SDK %d.%d.%d\r\n", ver[0], ver[1], ver[2]); //串口0 printf打印
 
   // input
-  ec_core_gpio_in_init(victor_gpio_input, EC_CORE_GPIO_PULL_UP_S);           // 初始化 上拉输入
-  ec_core_gpio_int_register(victor_gpio_input, input_rising, input_falling); // 中断使能
+  ec_core_gpio_in_init(vic_gpio_input, EC_CORE_GPIO_PULL_UP_S);           // 初始化 上拉输入
+  ec_core_gpio_int_register(vic_gpio_input, input_rising, input_falling); // 中断使能
 
   // output
-  ec_core_gpio_out_init(victor_gpio_output, EC_CORE_GPIO_LEVEL_H); // 初始化 上拉输出
+  ec_core_gpio_out_init(vic_gpio_output, EC_CORE_GPIO_LEVEL_H); // 初始化 上拉输出
 
   ec_core_sw_watchdog_init(EC_CORE_SW_TIMER6, 2, 3); //初始化软件看门狗，广播超时时间2分钟，蓝牙连接超时时间3分钟
 

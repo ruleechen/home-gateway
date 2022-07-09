@@ -19,15 +19,12 @@ uint16_t ec_app_flash_crc(uint8_t *data, uint16_t len) // CRC16计算
   uint8_t lsb;
   uint16_t i, j;
   uint16_t h = 0xffff;
-  for (i = 0; i < len; i++)
-  {
+  for (i = 0; i < len; i++) {
     h ^= *data;
-    for (j = 0; j < 8; j++)
-    {
+    for (j = 0; j < 8; j++) {
       lsb = h & 0x0001;
       h >>= 1;
-      if (lsb == 1)
-      {
+      if (lsb == 1) {
         h ^= 0xECB2;
       }
     }
@@ -56,16 +53,13 @@ static void ec_app_flash_safe_write(void) //系统参数保存到flash
   ec_app_flash_buf[EC_APP_FLASH_BUF_SIZE + 1] = crc & 0xff;                 //保存CRC到缓冲区
 
   ec_app_flash_sector_select = ec_app_flash_sector_select_get(); //读取标志位
-  if (ec_app_flash_sector_select == 0)
-  {
+  if (ec_app_flash_sector_select == 0) {
     //操作第二块扇区
     ec_core_flash_erase_sector(EC_APP_FLASH_ADDR_DATA2);                                       //擦除
     ec_core_flash_write(EC_APP_FLASH_ADDR_DATA2, ec_app_flash_buf, EC_APP_FLASH_BUF_SIZE + 2); //写入
     ec_app_flash_sector_select = 1;                                                            //修改标志位
     ec_app_flash_sector_select_set(ec_app_flash_sector_select);                                //保存标志位到flash
-  }
-  else
-  {
+  } else {
     //操作第一块扇区
     ec_core_flash_erase_sector(EC_APP_FLASH_ADDR_DATA1);                                       //擦除
     ec_core_flash_write(EC_APP_FLASH_ADDR_DATA1, ec_app_flash_buf, EC_APP_FLASH_BUF_SIZE + 2); //写入
@@ -77,20 +71,16 @@ static uint8_t ec_app_flash_safe_read() //从flash中读取系统参数
 {
   uint16_t crc1, crc2;
   ec_app_flash_sector_select = ec_app_flash_sector_select_get(); //读取标志位
-  if (ec_app_flash_sector_select == 0)
-  {
+  if (ec_app_flash_sector_select == 0) {
     //操作第一块扇区
     ec_core_flash_read(EC_APP_FLASH_ADDR_DATA1, ec_app_flash_buf, EC_APP_FLASH_BUF_SIZE + 2); //读取flash
-  }
-  else
-  {
+  } else {
     //操作第二块扇区
     ec_core_flash_read(EC_APP_FLASH_ADDR_DATA2, ec_app_flash_buf, EC_APP_FLASH_BUF_SIZE + 2); //读取flash
   }
   crc1 = ec_app_flash_crc(ec_app_flash_buf, EC_APP_FLASH_BUF_SIZE);                                   //计算CRC
   crc2 = ec_app_flash_buf[EC_APP_FLASH_BUF_SIZE] * 256 + ec_app_flash_buf[EC_APP_FLASH_BUF_SIZE + 1]; //读取存储的CRC
-  if (crc1 != crc2)
-  {
+  if (crc1 != crc2) {
     // CRC出错，数据不可用
     return 1;
   }
@@ -99,32 +89,26 @@ static uint8_t ec_app_flash_safe_read() //从flash中读取系统参数
   return 0;
 }
 
-void ec_app_flash_sys_param_write(void)
-{
+void ec_app_flash_sys_param_write(void) {
   ec_core_delay_ms(20); //延迟20ms 操作flash之前先延迟一会 避免和串口冲突
 
   //保存参数到缓存
-  ec_app_flash_buf[0] = ec_app_ble_peripheral_ota_en;
+  ec_app_flash_buf[0] = vic_ble_ota_en;
 
   //保存参数到flash
   ec_app_flash_safe_write();
 }
 
-void ec_app_flash_sys_param_read(void)
-{
+void ec_app_flash_sys_param_read(void) {
   uint8_t result = 0;
 
   //读取系统参数
-  for (uint8_t i = 0; i < 3; i++)
-  {
-    if (ec_app_flash_safe_read() == 0)
-    {
+  for (uint8_t i = 0; i < 3; i++) {
+    if (ec_app_flash_safe_read() == 0) {
       //读取成功
       result = 1;
       break;
-    }
-    else
-    {
+    } else {
       //读取失败
       ec_core_delay_ms(100); //延迟100ms
     }
@@ -137,5 +121,5 @@ void ec_app_flash_sys_param_read(void)
   }
 
   // 提取参数到系统
-  ec_app_ble_peripheral_ota_en = ec_app_flash_buf[0];
+  vic_ble_ota_en = ec_app_flash_buf[0];
 }

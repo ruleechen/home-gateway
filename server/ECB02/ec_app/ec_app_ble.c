@@ -16,7 +16,7 @@ void ec_app_ble_param_init(void) { //蓝牙参数初始化
   // ec_core_ble_set_ruuid("F53CB4F8-0EFC-4EC2-87B8-F330CD97A6FC");
   // ec_core_ble_set_wuuid("AAA5DC3F-5D20-463E-9B25-F56274DF0B7C");
 
-  ec_core_ble_peripheral_set_ota_en(ec_app_ble_peripheral_ota_en); //打开或关闭OTA升级
+  ec_core_ble_peripheral_set_ota_en(vic_ble_ota_en); //打开或关闭OTA升级
 
   uint8_t mac[6] = {0};
   ec_core_ble_get_mac(mac); //获取MAC地址
