@@ -1,9 +1,13 @@
 #include "ec_core.h"
 #include "ec_app_flash.h"
+#include "victor_gpio_config.h"
 
 // 1: 允许通过蓝牙无线升级程序
 // 0: 禁止无线升级程序，需要重新上电，拉高BOOT引脚才能进入下载模式
 uint8_t ec_app_ble_peripheral_ota_en = 1;
+
+uint16_t victor_adc_value   = 0; //寄存器值
+uint16_t victor_adc_voltage = 0; //电压值
 
 // 1: ON state is true
 // 0: ON state is false
@@ -17,6 +21,13 @@ void ec_app_ble_peripheral_set_ota_en(uint8_t p) { //开启或关闭OTA 默认�
   ec_core_sys_soft_reset();                        //系统复位
 }
 
+static void victor_measure_power(void) {
+  uint16_t value, voltage; //寄存器值和电压值
+  ec_core_adc_get(victor_gpio_adc, EC_CORE_ADC_RANGE_3200MV, EC_CORE_ADC_CALIBRATION_ENABLED, &value, &voltage);
+  victor_adc_value = value;
+  victor_adc_voltage = voltage;
+}
+
 static uint8_t victor_start_with(uint8_t* data, uint8_t from, uint8_t* find, uint8_t len) {
   uint8_t i = 0;
   while (data[i + from] == find[i]) {
@@ -25,20 +36,28 @@ static uint8_t victor_start_with(uint8_t* data, uint8_t from, uint8_t* find, uin
   return i == len ? 1 : 0;
 }
 
+// https://www.runoob.com/cprogramming/c-function-sprintf.html
+void victor_emit_power(void) {
+  char pw_buf[25] = {0};
+  sprintf(pw_buf, "PW:%u", victor_adc_value);
+  ec_core_ble_send(pw_buf, 25);
+}
+
 void victor_emit_state(void) {
-  if (victor_on_state == 0) {
-    ec_core_ble_send("ON:0", 4);
-  } else {
-    ec_core_ble_send("ON:1", 4);
-  }
+  char buf[4] = {0};
+  sprintf(buf, "ON:%s", victor_on_state ? "1" : "0");
+  ec_core_ble_send(buf, 4);
+}
+
+void victor_emit_heartbeat(void) {
+  char buf[7] = {0};
+  sprintf(buf, "HB:ON:%s", victor_on_state ? "1" : "0");
+  ec_core_ble_send(buf, 7);
 }
 
 static void victor_heartbeat(void) {
-  if (victor_on_state == 0) {
-    ec_core_ble_send("HB:ON:0", 7);
-  } else {
-    ec_core_ble_send("HB:ON:1", 7);
-  }
+  victor_measure_power();
+  victor_emit_heartbeat();
 }
 
 static void ec_app_ble_peripheral_connect_event(void) { //蓝牙连接回调

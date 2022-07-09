@@ -60,6 +60,7 @@ int main(void) {
   ec_app_ble_param_init();       // 初始化蓝牙相关的参数
 
   ec_core_init(); //蓝牙内核初始化
+  ec_core_adc_init();
 
   uart0_init();
 

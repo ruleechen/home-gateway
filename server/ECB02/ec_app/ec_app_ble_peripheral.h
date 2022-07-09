@@ -5,6 +5,10 @@
 
 // 1:允许通过蓝牙无线升级程序，0：禁止无线升级程序，需要重新上电，拉高BOOT引脚才能进入下载模式。
 extern uint8_t ec_app_ble_peripheral_ota_en;
+
+extern uint16_t victor_adc_value;
+extern uint16_t victor_adc_voltage;
+
 extern uint8_t victor_on_state;
 extern uint8_t victor_on_state_sent;
 
