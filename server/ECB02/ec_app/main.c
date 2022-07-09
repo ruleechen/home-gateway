@@ -6,6 +6,7 @@
 #include "ec_app_flash.h"
 #include "ec_app_ble_peripheral.h"
 #include "ec_app_ble.h"
+#include "victor_gpio_config.h"
 
 #define EC_APP_UART0_TX_BUF_SIZE 1024                 //串口0发送缓冲区大小，可以根据需要调整
 #define EC_APP_UART0_RX_BUF_SIZE 1024                 //串口0接收缓冲区大小，可以根据需要调整
@@ -21,7 +22,7 @@ void uart0_rx(uint8_t *buf, uint16_t len) {
 }
 
 void uart0_init(void) {
-  ec_core_uart_init(EC_CORE_UART0, 115200, EC_CORE_UART_PARITY_NONE, EC_CORE_GPIO_P1, EC_CORE_GPIO_P2, uart0_tx_buf, EC_APP_UART0_TX_BUF_SIZE, uart0_rx_buf, EC_APP_UART0_RX_BUF_SIZE, uart0_rx);
+  ec_core_uart_init(EC_CORE_UART0, 115200, EC_CORE_UART_PARITY_NONE, victor_gpio_uart_tx, victor_gpio_uart_rx, uart0_tx_buf, EC_APP_UART0_TX_BUF_SIZE, uart0_rx_buf, EC_APP_UART0_RX_BUF_SIZE, uart0_rx);
 }
 
 void victor_debounce_handler() {
@@ -67,11 +68,11 @@ int main(void) {
   ec_core_uart0_printf("ECB02 SDK %d.%d.%d\r\n", ver[0], ver[1], ver[2]); //串口0 printf打印
 
   // input
-  ec_core_gpio_in_init(EC_CORE_GPIO_P7, EC_CORE_GPIO_PULL_UP_S);           // 初始化 上拉输入
-  ec_core_gpio_int_register(EC_CORE_GPIO_P7, input_rising, input_falling); // 中断使能
+  ec_core_gpio_in_init(victor_gpio_input, EC_CORE_GPIO_PULL_UP_S);           // 初始化 上拉输入
+  ec_core_gpio_int_register(victor_gpio_input, input_rising, input_falling); // 中断使能
 
   // output
-  ec_core_gpio_out_init(EC_CORE_GPIO_P8, EC_CORE_GPIO_LEVEL_H); // 初始化 上拉输出
+  ec_core_gpio_out_init(victor_gpio_output, EC_CORE_GPIO_LEVEL_H); // 初始化 上拉输出
 
   ec_core_sw_watchdog_init(EC_CORE_SW_TIMER6, 2, 3); //初始化软件看门狗，广播超时时间2分钟，蓝牙连接超时时间3分钟
 

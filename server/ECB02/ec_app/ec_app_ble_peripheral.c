@@ -74,7 +74,7 @@ static void ec_app_ble_peripheral_receive_event(uint8_t* data, uint8_t len) { //
   if (victor_start_with(data, 0, "QY", 2)) { // QUERY
     victor_emit_state();
   } else if (victor_start_with(data, 0, "AM", 2)) { // ALARM
-    ec_core_gpio_write(EC_CORE_GPIO_P8, (data[3] == '1' ? EC_CORE_GPIO_LEVEL_L : EC_CORE_GPIO_LEVEL_H));
+    ec_core_gpio_write(victor_gpio_output, (data[3] == '1' ? EC_CORE_GPIO_LEVEL_L : EC_CORE_GPIO_LEVEL_H));
   }
 
   ec_core_sw_watchdog_feed(); //软件看门狗喂狗
