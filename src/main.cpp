@@ -73,13 +73,13 @@ void loop() {
     std::vector<std::string> disconnectedAddresses = {};
     for (auto it = clients.begin(); it != clients.end(); ++it) {
       const auto client = clients[it->first];
-      client->send({
-        .type = SERVER_COMMAND_ALARM,
-        .args = alarmOnState ? "1" : "0",
-      });
-      alarmOnState = !alarmOnState;
       if (!client->isConnected()) {
         disconnectedAddresses.push_back(it->first);
+      } else {
+        client->send({
+          .type = SERVER_COMMAND_QUERY_BATTERY,
+        });
+        alarmOnState = !alarmOnState;
       }
     }
     // for (auto address : disconnectedAddresses) {
