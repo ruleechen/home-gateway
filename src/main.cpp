@@ -16,8 +16,7 @@ static std::map<std::string, VictorBleClient*> clients = {};
 
 class AdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
   void onResult(BLEAdvertisedDevice advertisedDevice) {
-    Serial.print("BLE Advertised Device found: ");
-    Serial.println(advertisedDevice.toString().c_str());
+    Serial.printf("BLE Advertised Device found [%s]", advertisedDevice.toString().c_str()); Serial.println();
     if (
       advertisedDevice.haveServiceUUID() &&
       advertisedDevice.isAdvertisingService(advertisingServiceUUID)
@@ -25,16 +24,17 @@ class AdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
       const auto address = advertisedDevice.getAddress().toString();
       if (clients.count(address) == 0) {
         const auto client = new VictorBleClient(new BLEAdvertisedDevice(advertisedDevice));
-        client->onNotify = [](const ServerNotification* notification) {
+        client->onNotify = [](BLEAddress& serverAddress, ServerNotification* notification) {
           auto item = notification;
           while (item != nullptr && item->type) {
+            Serial.printf("[%s] ", serverAddress.toString().c_str());
             Serial.println(item->raw);
             item = item->next;
           }
         };
         advertisedAddresses.push_back(address);
         clients[address] = client;
-        Serial.println("Created client for server [" + String(address.c_str()) + "]");
+        Serial.printf("Created client for server [%s]", address.c_str()); Serial.println();
       }
     }
   }
@@ -65,7 +65,7 @@ void loop() {
       for (auto address : advertisedAddresses) {
         const auto client = clients[address];
         client->connectServer();
-        Serial.println("Connecting server [" + String(address.c_str()) + "]");
+        Serial.printf("Connecting server [%s]", address.c_str()); Serial.println();
       }
       advertisedAddresses.clear();
     }
@@ -77,15 +77,16 @@ void loop() {
         disconnectedAddresses.push_back(it->first);
       } else {
         client->send({
-          .type = SERVER_COMMAND_QUERY_BATTERY,
+          .type = SERVER_COMMAND_SET_ALARM,
+          .args = alarmOnState ? "1" : "0",
         });
         alarmOnState = !alarmOnState;
       }
     }
-    // for (auto address : disconnectedAddresses) {
-    //   clients.erase(address);
-    //   Serial.println("Removed client [" + String(address.c_str()) + "]");
-    // }
-    Serial.println("Clients [" + String(clients.size()) + "]");
+    for (auto address : disconnectedAddresses) {
+      clients.erase(address);
+      Serial.printf("Removed client [%s]", address.c_str()); Serial.println();
+    }
+    Serial.printf("Clients [%d]", clients.size()); Serial.println();
   }
 }

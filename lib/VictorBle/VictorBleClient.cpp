@@ -69,7 +69,8 @@ namespace Victor::Components {
           lastHeartbeat = millis();
         }
         if (onNotify != nullptr) {
-          onNotify(notification);
+          auto serverAddress = _advertisedDevice->getAddress();
+          onNotify(serverAddress, notification);
         }
       });
     }
