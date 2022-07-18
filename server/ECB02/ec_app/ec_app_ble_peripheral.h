@@ -15,6 +15,7 @@ extern uint8_t vic_ble_ota_en;
 extern uint16_t vic_adc_value;
 extern uint16_t vic_adc_voltage;
 
+extern uint8_t vic_client_authenticated;
 extern uint8_t vic_on_state;
 extern uint8_t vic_on_state_sent;
 

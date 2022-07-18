@@ -38,7 +38,6 @@ namespace Victor::Components {
 
     const auto success = _client->connect(_advertisedDevice);
     if (success) {
-      lastHeartbeat = millis(); // connect success means it is alive
       const auto remoteServices = _client->getServices();
       for (auto service = remoteServices->begin(); service != remoteServices->end(); service++) {
         const auto remoteCharacteristics = service->second->getCharacteristics();
@@ -65,13 +64,18 @@ namespace Victor::Components {
           Serial.println(dataStr);
           return;
         }
-        if (notification->type == SERVER_NOTIFY_HEARTBEAT) {
-          lastHeartbeat = millis();
+        if (notification->type == SERVER_NOTIFY_READY) {
+          serverReady = millis();
         }
         if (onNotify != nullptr) {
           auto serverAddress = _advertisedDevice->getAddress();
           onNotify(serverAddress, notification);
         }
+      });
+
+      send({
+        .type = SERVER_COMMAND_AUTHENTICATE,
+        .args = "RS20220718",
       });
     }
 
@@ -93,9 +97,9 @@ namespace Victor::Components {
   }
 
   ServerNotifyType VictorBleClient::parseNotifyType(const String& code) {
-    if (code == "HB") {
-      return SERVER_NOTIFY_HEARTBEAT;
-    } else if (code == "BT") {
+    if (code == "RDY") {
+      return SERVER_NOTIFY_READY;
+    } else if (code == "BTY") {
       return SERVER_NOTIFY_BATTERY;
     } else if (code == "ON") {
       return SERVER_NOTIFY_ON;
@@ -105,8 +109,12 @@ namespace Victor::Components {
 
   ServerNotification* VictorBleClient::parseNotification(const String& str) {
     // split
-    const auto code = str.substring(0, 2);
-    const auto args = str.substring(3);
+    const auto index = str.indexOf(':');
+    if (index < 1) {
+      return nullptr;
+    }
+    const auto code = str.substring(0, index);
+    const auto args = str.substring(index + 1);
     // type
     const auto type = parseNotifyType(code);
     if (type == SERVER_NOTIFY_NONE) {

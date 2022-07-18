@@ -41,7 +41,6 @@ class AdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 };
 
 static unsigned long lastLoop = 0;
-static unsigned long lastHeartbeat = 0;
 
 void setup() {
   Serial.begin(115200);

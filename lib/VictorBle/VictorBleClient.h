@@ -35,7 +35,7 @@ namespace Victor::Components {
     bool send(const ServerCommand command);
     static ServerNotifyType parseNotifyType(const String& str);
     static ServerNotification* parseNotification(const String& str);
-    unsigned long lastHeartbeat = 0;
+    unsigned long serverReady = 0;
     typedef std::function<void(BLEAddress& serverAddress, ServerNotification* notification)> TNotifyHandler;
     TNotifyHandler onNotify = nullptr;
 
