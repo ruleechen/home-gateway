@@ -33,49 +33,41 @@ void vic_set_ota_en(uint8_t p) { //开启或关闭OTA 默认开启
   ec_core_sys_soft_reset();                        //系统复位
 }
 
-static uint8_t vic_start_with(uint8_t* data, uint8_t from, char* find) {
-  uint8_t i = 0;
-  while (data[i + from] == find[i]) {
-    i++;
-  }
-  return i == strlen(find) ? 1 : 0;
-}
-
-static void vic_uart_log(uint8_t* title, uint8_t* data, uint16_t len) {
+static void vic_uart_log(char* title, char* data, uint8_t len) {
   ec_core_uart0_printf("%s [", title);
-  ec_core_uart_send(EC_CORE_UART0, data, len); //蓝牙数据转发到串口
+  ec_core_uart_send(EC_CORE_UART0, (uint8_t*)data, len); //蓝牙数据转发到串口
   ec_core_uart0_printf("]\r\n");
 }
 
-static void vic_ble_emit(uint8_t* data, uint16_t len) {
-  ec_core_ble_send(data, len);
+static void vic_ble_emit(char* data, uint8_t len) {
+  ec_core_ble_send((uint8_t*)data, len);
   vic_uart_log("ble emit", data, len);
 }
 
 // https://www.runoob.com/cprogramming/c-function-sprintf.html
-void vic_confirm_ready(void) {
-  char buf[5] = {0};
+static void vic_confirm_ready(void) {
+  char buf[5];
   sprintf(buf, "RDY:%01d", vic_client_authenticated);
-  vic_ble_emit((uint8_t*)buf, 5);
+  vic_ble_emit(buf, sizeof(buf));
 }
 static void vic_reply_battery_state(void) {
-  char buf[8] = {0};
+  char buf[8];
   sprintf(buf, "BTY:%04d", vic_adc_voltage);
-  vic_ble_emit((uint8_t*)buf, 8);
+  vic_ble_emit(buf, sizeof(buf));
 }
 void vic_emit_on_state(void) {
-  char buf[4] = {0};
+  char buf[5]; // when length is less than 5, it throw error
   sprintf(buf, "ON:%01d", vic_on_state);
-  vic_ble_emit((uint8_t*)buf, 4);
+  vic_ble_emit(buf, sizeof(buf) - 1);
 }
 
 static void vic_ble_disconnect(void) {
   ec_core_ble_disconnect();
 }
 
-static void vic_check_authentication(uint8_t* token) {
+static void vic_check_authentication(char* token) {
   ec_core_sw_timer_stop(EC_CORE_SW_TIMER1);
-  vic_client_authenticated = strcmp((char*)token, VIC_AUTHENTICATION_TOKEN) == 0 ? 1 : 0;
+  vic_client_authenticated = strcmp(token, VIC_AUTHENTICATION_TOKEN) == 0 ? 1 : 0;
   if (vic_client_authenticated) {
     vic_confirm_ready();
   } else {
@@ -83,8 +75,9 @@ static void vic_check_authentication(uint8_t* token) {
   }
 }
 
-static void vic_wait_authentication(void) {
-  ec_core_sw_timer_start(EC_CORE_SW_TIMER1, 5000, vic_ble_disconnect);
+static void vic_renew_authentication(void) {
+  vic_client_authenticated = 0;
+  ec_core_sw_timer_start(EC_CORE_SW_TIMER1, 10 * 1000, vic_ble_disconnect);
 }
 
 static void vic_measure_battery(void) {
@@ -96,7 +89,7 @@ static void vic_measure_battery(void) {
 
 static void vic_activate(void) {
   vic_measure_battery();
-  vic_wait_authentication();
+  vic_renew_authentication();
 }
 
 static void vic_teardown(void) {
@@ -104,20 +97,33 @@ static void vic_teardown(void) {
   ec_core_sw_timer_stop(EC_CORE_SW_TIMER1);
 }
 
-static void vic_message(uint8_t* data, uint8_t len) {
+static void vic_message(char* data, uint8_t len) {
   vic_uart_log("ble receive", data, len);
+  char* found = strstr(data, ":");
+  if (found == NULL) {
+    return;
+  }
+
+  int cmd_size = found - data;
+  char* command = malloc(cmd_size + 1);
+  strncpy(command, data, cmd_size);
+
+  int arg_size = len - (cmd_size + 1);
+  char* argument = malloc(arg_size + 1);
+  strncpy(argument, data + (cmd_size + 1), arg_size);
+
   if (vic_client_authenticated) {
-    if (vic_start_with(data, 0, "ON")) { // QUERY_ON
+    if (strcmp(command, "ON") == 0) { // QUERY_ON
       vic_emit_on_state();
-    } else if (vic_start_with(data, 0, "AM")) { // SET_ALARM
-      ec_core_gpio_write(vic_gpio_output, (data[3] == '1' ? EC_CORE_GPIO_LEVEL_L : EC_CORE_GPIO_LEVEL_H));
-    } else if (vic_start_with(data, 0, "BTY")) { // QUERY_BATTERY
+    } else if (strcmp(command, "AM") == 0) { // SET_ALARM
+      ec_core_gpio_write(vic_gpio_output, (strcmp(argument, "1") == 0 ? EC_CORE_GPIO_LEVEL_L : EC_CORE_GPIO_LEVEL_H));
+    } else if (strcmp(command, "BTY") == 0) { // QUERY_BATTERY
       vic_reply_battery_state();
-    } else if (vic_start_with(data, 0, "OTA")) { // SET_OTA
-      vic_set_ota_en(data[4] == '1' ? 1 : 0);
+    } else if (strcmp(command, "OTA") == 0) { // SET_OTA
+      vic_set_ota_en(strcmp(argument, "1") == 0 ? 1 : 0);
     }
-  } else if (vic_start_with(data, 0, "AUTH")) { // AUTHENTICATE
-    vic_check_authentication(&data[5]);
+  } else if (strcmp(command, "AUTH") == 0) { // AUTHENTICATE
+    vic_check_authentication(argument);
   }
 }
 
@@ -136,7 +142,7 @@ static void ec_app_ble_peripheral_notify_disable_event(void) { //蓝牙订阅关
   ec_core_uart0_printf("ble peripheral notify disable\r\n");
 }
 static void ec_app_ble_peripheral_receive_event(uint8_t* data, uint8_t len) { //蓝牙数据接收回调
-  vic_message(data, len);
+  vic_message((char*)data, len);
   ec_core_sw_watchdog_feed(); //软件看门狗喂狗
 }
 
