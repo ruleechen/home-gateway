@@ -26,11 +26,11 @@ uint16_t vic_adc_voltage = 0;
 uint8_t vic_on_state = 0;
 uint8_t vic_on_state_sent = 0;
 
-void vic_set_ota_en(uint8_t p) { //开启或关闭OTA 默认开启
-  vic_ble_ota_en = p;                              //修改内存
-  ec_app_flash_sys_param_write();                  //保存到flash
-  ec_core_delay_ms(20);                            //延迟20ms
-  ec_core_sys_soft_reset();                        //系统复位
+void vic_set_ota_en(uint8_t p) {  //开启或关闭OTA 默认开启
+  vic_ble_ota_en = p;             //修改内存
+  ec_app_flash_sys_param_write(); //保存到flash
+  ec_core_delay_ms(20);           //延迟20ms
+  ec_core_sys_soft_reset();       //系统复位
 }
 
 static void vic_uart_log(char* title, char* data, uint8_t len) {
@@ -97,7 +97,7 @@ static void vic_teardown(void) {
   ec_core_sw_timer_stop(EC_CORE_SW_TIMER1);
 }
 
-static void vic_message(char* data, uint8_t len) {
+void vic_receive_message(char* data, uint8_t len) {
   vic_uart_log("ble receive", data, len);
   char* found = strstr(data, ":");
   if (found == NULL) {
@@ -142,7 +142,7 @@ static void ec_app_ble_peripheral_notify_disable_event(void) { //蓝牙订阅关
   ec_core_uart0_printf("ble peripheral notify disable\r\n");
 }
 static void ec_app_ble_peripheral_receive_event(uint8_t* data, uint8_t len) { //蓝牙数据接收回调
-  vic_message((char*)data, len);
+  vic_receive_message((char*)data, len);
   ec_core_sw_watchdog_feed(); //软件看门狗喂狗
 }
 

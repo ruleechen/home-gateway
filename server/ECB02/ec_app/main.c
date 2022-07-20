@@ -12,12 +12,9 @@
 uint8_t uart0_tx_buf[EC_APP_UART0_TX_BUF_SIZE] = {0}; //串口0发送缓冲区
 uint8_t uart0_rx_buf[EC_APP_UART0_RX_BUF_SIZE] = {0}; //串口0接收缓冲区
 
-void uart0_rx(uint8_t *buf, uint16_t len) {
-  ec_core_ble_send(buf, len); //串口数据转发到蓝牙
-
-  if (strcmp((char*)buf, "DISC") == 0) {
-    ec_core_ble_disconnect(); //主动断开蓝牙连接
-  }
+void uart0_rx(uint8_t* buf, uint16_t len) {
+  vic_receive_message((char*)buf, len);
+  // ec_core_ble_send(buf, len); //串口数据转发到蓝牙
 }
 
 void uart0_init(void) {
@@ -65,7 +62,7 @@ int main(void) {
   // input
   ec_core_gpio_in_init(vic_gpio_input, EC_CORE_GPIO_PULL_UP_S);           // 初始化 上拉输入
   ec_core_gpio_int_register(vic_gpio_input, input_rising, input_falling); // 中断使能
-  vic_set_on_state(ec_core_gpio_read(vic_gpio_input) == EC_CORE_GPIO_LEVEL_L ? 1 :0);
+  vic_set_on_state(ec_core_gpio_read(vic_gpio_input) == EC_CORE_GPIO_LEVEL_L ? 1 : 0);
 
   // output
   ec_core_gpio_out_init(vic_gpio_output, EC_CORE_GPIO_LEVEL_H); // 初始化 上拉输出
