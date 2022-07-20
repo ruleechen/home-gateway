@@ -20,7 +20,7 @@ extern uint8_t vic_on_state;
 extern uint8_t vic_on_state_sent;
 
 extern void vic_emit_on_state(void);
-extern void vic_receive_message(char* data, uint8_t len);
+extern void vic_handle_incoming_message(char* data, uint8_t len);
 
 extern void ec_app_ble_peripheral_set_ota_en(uint8_t p); //开启或关闭OTA 默认开启
 extern void ec_app_ble_peripheral_register_event(void);  // 注册蓝牙事件回调

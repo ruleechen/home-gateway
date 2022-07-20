@@ -13,9 +13,8 @@ uint8_t uart0_tx_buf[EC_APP_UART0_TX_BUF_SIZE] = {0}; //串口0发送缓冲区
 uint8_t uart0_rx_buf[EC_APP_UART0_RX_BUF_SIZE] = {0}; //串口0接收缓冲区
 
 void uart0_rx(uint8_t* buf, uint16_t len) {
-  vic_receive_message((char*)buf, len);
   ec_core_uart_send(EC_CORE_UART0, buf, len); // ECHO 回显
-  // ec_core_ble_send(buf, len); //串口数据转发到蓝牙
+  vic_handle_incoming_message((char*)buf, len);
 }
 
 void uart0_init(void) {
@@ -24,15 +23,17 @@ void uart0_init(void) {
 
 void vic_debounce_handler() {
   ec_core_sw_timer_stop(EC_CORE_SW_TIMER2);
-  vic_on_state_sent = vic_on_state;
-  if (vic_client_authenticated) {
+  if (
+    vic_client_authenticated &&
+    vic_on_state != vic_on_state_sent
+  ) {
     vic_emit_on_state();
   }
 }
 
 void vic_debounce_emit() {
   ec_core_sw_timer_stop(EC_CORE_SW_TIMER2);
-  ec_core_sw_timer_start(EC_CORE_SW_TIMER2, 100, vic_debounce_handler);
+  ec_core_sw_timer_start(EC_CORE_SW_TIMER2, 50, vic_debounce_handler);
 }
 
 void vic_set_on_state(uint8_t state) {

@@ -63,8 +63,8 @@ void loop() {
     if (advertisedAddresses.size() > 0) {
       for (auto address : advertisedAddresses) {
         const auto client = clients[address];
-        client->connectServer();
         Serial.printf("Connecting server [%s]", address.c_str()); Serial.println();
+        client->connectServer();
       }
       advertisedAddresses.clear();
     }

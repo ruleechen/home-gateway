@@ -3,11 +3,11 @@
 
 #define VIC_AUTHENTICATION_TOKEN "RS20220718"
 
-ec_core_gpio_pin_e vic_gpio_uart_tx = EC_CORE_GPIO_P1; // UART0 tx pin
-ec_core_gpio_pin_e vic_gpio_uart_rx = EC_CORE_GPIO_P2; // UART0 rx pin
-ec_core_gpio_pin_e vic_gpio_input   = EC_CORE_GPIO_P3;   // switch on/off input pin
-ec_core_gpio_pin_e vic_gpio_output  = EC_CORE_GPIO_P4;  // alarm on/off output pin
-ec_core_adc_ch_e   vic_gpio_adc     = EC_CORE_ADC_CH4_P10;   // battery detection
+ec_core_gpio_pin_e vic_gpio_uart_tx = EC_CORE_GPIO_P1;     // UART0 tx pin
+ec_core_gpio_pin_e vic_gpio_uart_rx = EC_CORE_GPIO_P2;     // UART0 rx pin
+ec_core_gpio_pin_e vic_gpio_input   = EC_CORE_GPIO_P3;     // switch on/off input pin
+ec_core_gpio_pin_e vic_gpio_output  = EC_CORE_GPIO_P4;     // alarm on/off output pin
+ec_core_adc_ch_e   vic_gpio_adc     = EC_CORE_ADC_CH4_P10; // battery detection
 
 // 1: 允许通过蓝牙无线升级程序
 // 0: 禁止无线升级程序，需要重新上电，拉高BOOT引脚才能进入下载模式
@@ -33,15 +33,9 @@ void vic_set_ota_en(uint8_t p) {  //开启或关闭OTA 默认开启
   ec_core_sys_soft_reset();       //系统复位
 }
 
-static void vic_uart_log(char* title, char* data, uint8_t len) {
-  ec_core_uart0_printf("%s [", title);
-  ec_core_uart_send(EC_CORE_UART0, (uint8_t*)data, len); //蓝牙数据转发到串口
-  ec_core_uart0_printf("]\r\n");
-}
-
 static void vic_ble_emit(char* data, uint8_t len) {
   ec_core_ble_send((uint8_t*)data, len);
-  vic_uart_log("ble emit", data, len);
+  ec_core_uart0_printf("ble emit [%s]\r\n", data);
 }
 
 // https://www.runoob.com/cprogramming/c-function-sprintf.html
@@ -59,6 +53,7 @@ void vic_emit_on_state(void) {
   char buf[5]; // when length is less than 5, it throw error
   sprintf(buf, "ON:%01d", vic_on_state);
   vic_ble_emit(buf, sizeof(buf) - 1);
+  vic_on_state_sent = vic_on_state;
 }
 
 static void vic_ble_disconnect(void) {
@@ -97,8 +92,7 @@ static void vic_teardown(void) {
   ec_core_sw_timer_stop(EC_CORE_SW_TIMER1);
 }
 
-void vic_receive_message(char* data, uint8_t len) {
-  vic_uart_log("ble receive", data, len);
+void vic_handle_incoming_message(char* data, uint8_t len) {
   char* found = strstr(data, ":");
   if (found == NULL) {
     return;
@@ -111,6 +105,8 @@ void vic_receive_message(char* data, uint8_t len) {
   int arg_size = len - (cmd_size + 1);
   char* argument = malloc(arg_size + 1);
   strncpy(argument, data + (cmd_size + 1), arg_size);
+
+  ec_core_uart0_printf(" > cmd [%s] arg [%s]\r\n", command, argument);
 
   if (vic_client_authenticated) {
     if (strcmp(command, "ON") == 0) { // QUERY_ON
@@ -142,7 +138,8 @@ static void ec_app_ble_peripheral_notify_disable_event(void) { //蓝牙订阅关
   ec_core_uart0_printf("ble peripheral notify disable\r\n");
 }
 static void ec_app_ble_peripheral_receive_event(uint8_t* data, uint8_t len) { //蓝牙数据接收回调
-  vic_receive_message((char*)data, len);
+  ec_core_uart_send(EC_CORE_UART0, data, len); // 蓝牙数据转发到串口
+  vic_handle_incoming_message((char*)data, len);
   ec_core_sw_watchdog_feed(); //软件看门狗喂狗
 }
 
