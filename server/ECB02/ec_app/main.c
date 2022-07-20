@@ -14,6 +14,7 @@ uint8_t uart0_rx_buf[EC_APP_UART0_RX_BUF_SIZE] = {0}; //串口0接收缓冲区
 
 void uart0_rx(uint8_t* buf, uint16_t len) {
   vic_receive_message((char*)buf, len);
+  ec_core_uart_send(EC_CORE_UART0, buf, len); // ECHO 回显
   // ec_core_ble_send(buf, len); //串口数据转发到蓝牙
 }
 
@@ -69,8 +70,7 @@ int main(void) {
 
   ec_core_sw_watchdog_init(EC_CORE_SW_TIMER6, 2, 3); //初始化软件看门狗，广播超时时间2分钟，蓝牙连接超时时间3分钟
 
-  // ec_core_sleep_disable(); //禁止睡眠，串口可以接收数据
-  ec_core_sleep_enable();
+  ec_core_sleep_disable(); //禁止睡眠，串口可以接收数据
   ec_core_main_loop_run(); //系统主循环
 }
 
