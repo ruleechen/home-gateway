@@ -12,13 +12,17 @@
 uint8_t uart0_tx_buf[EC_APP_UART0_TX_BUF_SIZE] = {0}; //串口0发送缓冲区
 uint8_t uart0_rx_buf[EC_APP_UART0_RX_BUF_SIZE] = {0}; //串口0接收缓冲区
 
-void uart0_rx(uint8_t* buf, uint16_t len) {
+void vic_uart0_rx(uint8_t* buf, uint16_t len) {
   ec_core_uart_send(EC_CORE_UART0, buf, len); // ECHO 回显
   vic_handle_incoming_message((char*)buf, len);
 }
 
-void uart0_init(void) {
-  ec_core_uart_init(EC_CORE_UART0, 115200, EC_CORE_UART_PARITY_NONE, vic_gpio_uart_tx, vic_gpio_uart_rx, uart0_tx_buf, EC_APP_UART0_TX_BUF_SIZE, uart0_rx_buf, EC_APP_UART0_RX_BUF_SIZE, uart0_rx);
+void vic_uart0_init(void) {
+  ec_core_uart_init(EC_CORE_UART0, 115200, EC_CORE_UART_PARITY_NONE, vic_gpio_uart_tx, vic_gpio_uart_rx, uart0_tx_buf, EC_APP_UART0_TX_BUF_SIZE, uart0_rx_buf, EC_APP_UART0_RX_BUF_SIZE, vic_uart0_rx);
+  // print core version
+  uint8_t ver[3] = {0};
+  ec_core_ver(ver);
+  ec_core_uart0_printf("ECB02 SDK %d.%d.%d\r\n", ver[0], ver[1], ver[2]);
 }
 
 void vic_debounce_handler() {
@@ -46,6 +50,15 @@ void vic_set_on_state(uint8_t state) {
 void input_rising(void) { vic_set_on_state(0); }
 void input_falling(void) { vic_set_on_state(1); }
 
+void vic_gpio_init(void) {
+  // input
+  ec_core_gpio_in_init(vic_gpio_input, EC_CORE_GPIO_PULL_UP_S);           // 初始化 上拉输入
+  ec_core_gpio_int_register(vic_gpio_input, input_rising, input_falling); // 中断使能
+  vic_set_on_state(ec_core_gpio_read(vic_gpio_input) == EC_CORE_GPIO_LEVEL_L ? 1 : 0);
+  // output
+  ec_core_gpio_out_init(vic_gpio_output, EC_CORE_GPIO_LEVEL_L); // 初始化 上拉输出
+}
+
 int main(void) {
   ec_core_sys_clk_set(EC_CORE_SYS_CLK_48M); //配置系统时钟
 
@@ -55,19 +68,8 @@ int main(void) {
   ec_core_init(); //蓝牙内核初始化
   ec_core_adc_init();
 
-  uart0_init();
-
-  uint8_t ver[3] = {0};
-  ec_core_ver(ver);                                                       //读取软件版本
-  ec_core_uart0_printf("ECB02 SDK %d.%d.%d\r\n", ver[0], ver[1], ver[2]); //串口0 printf打印
-
-  // input
-  ec_core_gpio_in_init(vic_gpio_input, EC_CORE_GPIO_PULL_UP_S);           // 初始化 上拉输入
-  ec_core_gpio_int_register(vic_gpio_input, input_rising, input_falling); // 中断使能
-  vic_set_on_state(ec_core_gpio_read(vic_gpio_input) == EC_CORE_GPIO_LEVEL_L ? 1 : 0);
-
-  // output
-  ec_core_gpio_out_init(vic_gpio_output, EC_CORE_GPIO_LEVEL_H); // 初始化 上拉输出
+  vic_uart0_init();
+  vic_gpio_init();
 
   ec_core_sleep_disable(); //禁止睡眠，串口可以接收数据
   ec_core_main_loop_run(); //系统主循环
