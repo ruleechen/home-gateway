@@ -7,6 +7,18 @@
 using namespace Victor;
 using namespace Victor::Components;
 
+void ledOn() {
+  digitalWrite(LED_BUILTIN, HIGH);
+}
+void ledOff() {
+  digitalWrite(LED_BUILTIN, LOW);
+}
+void ledFlash(unsigned long ms = 100) {
+  ledOn();
+  delay(ms); // at least light for some time
+  ledOff();
+}
+
 /* Specify the Service UUID of Server */
 static BLEUUID advertisingServiceUUID("00001002-0000-1000-8000-00805f9b34fb");
 static BLEScan* scan = nullptr;
@@ -31,6 +43,13 @@ class AdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
             Serial.println(item->raw);
             item = item->next;
           }
+          if (notification->type == SERVER_NOTIFY_ON) {
+            if (notification->args == "0") {
+              ledOff();
+            } else {
+              ledOn();
+            }
+          }
         };
         advertisedAddresses.push_back(address);
         clients[address] = client;
@@ -44,6 +63,8 @@ static unsigned long lastLoop = 0;
 
 void setup() {
   Serial.begin(115200);
+  pinMode(BUILTIN_LED, OUTPUT);
+  // ble init
   BLEDevice::init("Victor-Gateway");
   // init scan
   scan = BLEDevice::getScan();
@@ -52,11 +73,37 @@ void setup() {
   scan->setWindow(449);
   scan->setActiveScan(true);
   scan->start(5, true);
+  // done
+  Serial.println();
+  Serial.println("setup complete");
+  ledFlash(500);
 }
 
-static bool alarmOnState = false;
+String message = "";
+bool isEnterPressed = false;
 
 void loop() {
+  isEnterPressed = false;
+  while (Serial.available()) {
+    const auto ch = Serial.read();
+    if (!isEnterPressed) {
+      isEnterPressed = (ch == '\r');
+      if (!isEnterPressed) {
+        message += (char)ch;
+      }
+    }
+  }
+
+  if (isEnterPressed) {
+    message.trim();
+    for (auto it = clients.begin(); it != clients.end(); ++it) {
+      const auto client = clients[it->first];
+      client->send(message);
+    }
+    ledFlash();
+    message = "";
+  }
+
   const auto now = millis();
   if (now - lastLoop > 5000) {
     lastLoop = now;
@@ -68,24 +115,19 @@ void loop() {
       }
       advertisedAddresses.clear();
     }
-
     std::vector<std::string> disconnectedAddresses = {};
     for (auto it = clients.begin(); it != clients.end(); ++it) {
       const auto client = clients[it->first];
       if (!client->isConnected()) {
         disconnectedAddresses.push_back(it->first);
-      } else {
-        client->send({
-          .type = SERVER_COMMAND_SET_ALARM,
-          .args = alarmOnState ? "1" : "0",
-        });
-        alarmOnState = !alarmOnState;
       }
     }
     for (auto address : disconnectedAddresses) {
       clients.erase(address);
       Serial.printf("Removed client [%s]", address.c_str()); Serial.println();
     }
-    Serial.printf("Clients [%d]", clients.size()); Serial.println();
+    if (clients.size() > 0) {
+      ledFlash();
+    }
   }
 }

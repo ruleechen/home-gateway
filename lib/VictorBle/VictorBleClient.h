@@ -32,6 +32,7 @@ namespace Victor::Components {
     ~VictorBleClient();
     bool connectServer();
     bool isConnected();
+    bool send(const String message);
     bool send(const ServerCommand command);
     static ServerNotifyType parseNotifyType(const String& str);
     static ServerNotification* parseNotification(const String& str);

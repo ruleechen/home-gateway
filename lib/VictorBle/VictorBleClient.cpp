@@ -86,14 +86,18 @@ namespace Victor::Components {
     return _client->isConnected();
   }
 
-  bool VictorBleClient::send(const ServerCommand command) {
+  bool VictorBleClient::send(const String message) {
     auto sent = false;
     if (_client->isConnected() && _remoteCharacteristicWritable != nullptr) {
-      const auto message = command.serialize();
       _remoteCharacteristicWritable->writeValue(message.c_str(), message.length());
       sent = true;
     }
     return sent;
+  }
+
+  bool VictorBleClient::send(const ServerCommand command) {
+    const auto message = command.serialize();
+    return send(message);
   }
 
   ServerNotifyType VictorBleClient::parseNotifyType(const String& code) {

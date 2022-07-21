@@ -44,7 +44,7 @@ static void vic_confirm_ready(void) {
   sprintf(buf, "RDY:%01d", vic_client_authenticated);
   vic_ble_emit(buf, sizeof(buf));
 }
-static void vic_reply_battery_state(void) {
+static void vic_emit_battery_state(void) {
   char buf[8];
   sprintf(buf, "BTY:%04d", vic_adc_voltage);
   vic_ble_emit(buf, sizeof(buf));
@@ -83,7 +83,6 @@ static void vic_measure_battery(void) {
 }
 
 static void vic_activate(void) {
-  vic_measure_battery();
   vic_renew_authentication();
 }
 
@@ -114,7 +113,8 @@ void vic_handle_incoming_message(char* data, uint8_t len) {
     } else if (strcmp(command, "AM") == 0) { // SET_ALARM
       ec_core_gpio_write(vic_gpio_output, (strcmp(argument, "1") == 0 ? EC_CORE_GPIO_LEVEL_L : EC_CORE_GPIO_LEVEL_H));
     } else if (strcmp(command, "BTY") == 0) { // QUERY_BATTERY
-      vic_reply_battery_state();
+      vic_measure_battery();
+      vic_emit_battery_state();
     } else if (strcmp(command, "OTA") == 0) { // SET_OTA
       vic_set_ota_en(strcmp(argument, "1") == 0 ? 1 : 0);
     }
