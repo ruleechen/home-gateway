@@ -71,7 +71,7 @@ int main(void) {
   vic_uart0_init();
   vic_gpio_init();
 
-  ec_core_sleep_disable(); //禁止睡眠，串口可以接收数据
+  ec_core_sleep_enable(); // ec_core_sleep_disable(); //禁止睡眠，串口可以接收数据
   ec_core_main_loop_run(); //系统主循环
 }
 

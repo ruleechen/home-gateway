@@ -21,7 +21,7 @@ void ec_app_ble_param_init(void) { //蓝牙参数初始化
   uint8_t mac[6] = {0};
   ec_core_ble_get_mac(mac); //获取MAC地址
   char buf[25] = {0};
-  sprintf(buf, "RS018_%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  sprintf(buf, "RS019_%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
   ec_core_ble_peripheral_set_name((uint8_t *)buf, 18); //根据MAC地址修改蓝牙名字
   // ec_core_ble_peripheral_set_name("BT_123", strlen("BT_123"));
 
