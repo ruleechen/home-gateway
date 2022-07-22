@@ -32,7 +32,8 @@ namespace Victor::Components {
     _client = BLEDevice::createClient();
     const auto callbacks = new VictorBleClientCallbacks();
     callbacks->onConnectivityChange = [&](BLEClient* client, bool connected) {
-      Serial.println(connected ? "Connected" : "Disconnected");
+      const auto address = _advertisedDevice->getAddress().toString().c_str();
+      Serial.printf("[%s] %s", address, connected ? "connected" : "disconnected"); Serial.println();
     };
     _client->setClientCallbacks(callbacks);
 
@@ -61,7 +62,8 @@ namespace Victor::Components {
         const auto dataStr = String(data, length);
         const auto notification = parseNotification(dataStr);
         if (notification == nullptr) {
-          Serial.println(dataStr);
+          const auto address = _advertisedDevice->getAddress().toString().c_str();
+          Serial.printf("[%s] %s", address, dataStr); Serial.println();
           return;
         }
         if (notification->type == SERVER_NOTIFY_READY) {

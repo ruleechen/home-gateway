@@ -28,7 +28,7 @@ static std::map<std::string, VictorBleClient*> clients = {};
 
 class AdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
   void onResult(BLEAdvertisedDevice advertisedDevice) {
-    Serial.printf("BLE Advertised Device found [%s]", advertisedDevice.toString().c_str()); Serial.println();
+    Serial.printf("Scan found [%s]", advertisedDevice.toString().c_str()); Serial.println();
     if (
       advertisedDevice.haveServiceUUID() &&
       advertisedDevice.isAdvertisingService(advertisingServiceUUID)
@@ -39,8 +39,7 @@ class AdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
         client->onNotify = [](BLEAddress& serverAddress, ServerNotification* notification) {
           auto item = notification;
           while (item != nullptr && item->type) {
-            Serial.printf("[%s] ", serverAddress.toString().c_str());
-            Serial.println(item->raw);
+            Serial.printf("[%s] %s", serverAddress.toString().c_str(), item->raw); Serial.println();
             item = item->next;
           }
           if (notification->type == SERVER_NOTIFY_ON) {
@@ -53,7 +52,7 @@ class AdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
         };
         advertisedAddresses.push_back(address);
         clients[address] = client;
-        Serial.printf("Created client for server [%s]", address.c_str()); Serial.println();
+        Serial.printf("Server match [%s]", address.c_str()); Serial.println();
       }
     }
   }
@@ -110,7 +109,7 @@ void loop() {
     if (advertisedAddresses.size() > 0) {
       for (auto address : advertisedAddresses) {
         const auto client = clients[address];
-        Serial.printf("Connecting server [%s]", address.c_str()); Serial.println();
+        Serial.printf("[%s] connecting", address.c_str()); Serial.println();
         client->connectServer();
       }
       advertisedAddresses.clear();
@@ -124,7 +123,7 @@ void loop() {
     }
     for (auto address : disconnectedAddresses) {
       clients.erase(address);
-      Serial.printf("Removed client [%s]", address.c_str()); Serial.println();
+      Serial.printf("[%s] removed", address.c_str()); Serial.println();
     }
     if (clients.size() > 0) {
       ledFlash();
