@@ -119,6 +119,8 @@ void loop() {
       const auto client = clients[it->first];
       if (!client->isConnected()) {
         disconnectedAddresses.push_back(it->first);
+      } else {
+        client->loop();
       }
     }
     for (auto address : disconnectedAddresses) {

@@ -8,8 +8,9 @@ namespace Victor::Components {
   enum ServerNotifyType {
     SERVER_NOTIFY_NONE      = 0,
     SERVER_NOTIFY_READY     = 1,
-    SERVER_NOTIFY_BATTERY   = 2,
-    SERVER_NOTIFY_ON        = 3,
+    SERVER_NOTIFY_HEARTBEAT = 2,
+    SERVER_NOTIFY_BATTERY   = 3,
+    SERVER_NOTIFY_ON        = 4,
   };
 
   enum ServerCommandType {

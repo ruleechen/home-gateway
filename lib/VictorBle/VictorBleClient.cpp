@@ -28,6 +28,18 @@ namespace Victor::Components {
     }
   }
 
+  void VictorBleClient::loop() {
+    // heartbeat every 5 minutes
+    const auto now = millis();
+    if (now - _lastHeartbeat > VICTOR_BLE_HEARTBEAT_INTERVAL) {
+      _lastHeartbeat = now;
+      send({
+        .type = SERVER_COMMAND_HEARTBEAT,
+        .args = VICTOR_BLE_AUTHENTICATE_TOKEN,
+      });
+    }
+  }
+
   bool VictorBleClient::connectServer() {
     _client = BLEDevice::createClient();
     const auto callbacks = new VictorBleClientCallbacks();
@@ -66,8 +78,11 @@ namespace Victor::Components {
           Serial.printf("[%s] %s", address, dataStr); Serial.println();
           return;
         }
-        if (notification->type == SERVER_NOTIFY_READY) {
-          serverReady = millis();
+        if (
+          notification->type == SERVER_NOTIFY_READY ||
+          notification->type == SERVER_NOTIFY_HEARTBEAT
+        ) {
+          _lastHeartbeat = millis();
         }
         if (onNotify != nullptr) {
           auto serverAddress = _advertisedDevice->getAddress();
@@ -77,7 +92,7 @@ namespace Victor::Components {
 
       send({
         .type = SERVER_COMMAND_AUTHENTICATE,
-        .args = "RS20220718",
+        .args = VICTOR_BLE_AUTHENTICATE_TOKEN,
       });
     }
 
@@ -105,6 +120,8 @@ namespace Victor::Components {
   ServerNotifyType VictorBleClient::parseNotifyType(const String& code) {
     if (code == "RDY") {
       return SERVER_NOTIFY_READY;
+    } else if (code == "HRB") {
+      return SERVER_NOTIFY_HEARTBEAT;
     } else if (code == "BTY") {
       return SERVER_NOTIFY_BATTERY;
     } else if (code == "ON") {

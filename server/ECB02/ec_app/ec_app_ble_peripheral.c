@@ -13,9 +13,6 @@ ec_core_adc_ch_e   vic_gpio_adc     = EC_CORE_ADC_CH4_P10; // battery detection
 // 0: 禁止无线升级程序，需要重新上电，拉高BOOT引脚才能进入下载模式
 uint8_t vic_ble_ota_en = 1; // default enabled
 
-// tag of heartbeat
-char* vic_heartbeat_tag = NULL;
-
 // 1: yes
 // 0: no
 uint8_t vic_client_authenticated = 0;
@@ -42,11 +39,6 @@ static void vic_ble_emit(char* data, uint8_t len) {
 }
 
 // https://www.runoob.com/cprogramming/c-function-sprintf.html
-static void vic_confirm_ready(void) {
-  char buf[5];
-  sprintf(buf, "RDY:%01d", vic_client_authenticated);
-  vic_ble_emit(buf, sizeof(buf));
-}
 static void vic_emit_battery_state(void) {
   char buf[8];
   sprintf(buf, "BTY:%04d", vic_adc_voltage);
@@ -57,6 +49,12 @@ void vic_emit_on_state(void) {
   sprintf(buf, "ON:%01d", vic_on_state);
   vic_ble_emit(buf, sizeof(buf) - 1);
   vic_on_state_sent = vic_on_state;
+}
+static void vic_emit_heartbeat(void) {
+  vic_ble_emit("HBR:1", 5);
+}
+static void vic_confirm_ready(void) {
+  vic_ble_emit("RDY:1", 5);
 }
 
 static void vic_ble_disconnect(void) {
@@ -86,12 +84,13 @@ static void vic_measure_battery(void) {
 }
 
 static void vic_heartbeat(char* tag) {
-  free(vic_heartbeat_tag);
-  vic_heartbeat_tag = tag;
+  ec_core_sw_watchdog_feed();
+  vic_emit_heartbeat();
 }
 
 static void vic_activate(void) {
   vic_renew_authentication();
+  ec_core_sw_watchdog_feed();
 }
 
 static void vic_teardown(void) {
@@ -152,7 +151,6 @@ static void ec_app_ble_peripheral_notify_disable_event(void) { //蓝牙订阅关
 static void ec_app_ble_peripheral_receive_event(uint8_t* data, uint8_t len) { //蓝牙数据接收回调
   ec_core_uart_send(EC_CORE_UART0, data, len); // 蓝牙数据转发到串口
   vic_handle_incoming_message((char*)data, len);
-  ec_core_sw_watchdog_feed(); //软件看门狗喂狗
 }
 
 void ec_app_ble_peripheral_register_event(void) {                                                                               //注册蓝牙事件回调
