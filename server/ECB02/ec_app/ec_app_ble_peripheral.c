@@ -13,6 +13,9 @@ ec_core_adc_ch_e   vic_gpio_adc     = EC_CORE_ADC_CH4_P10; // battery detection
 // 0: 禁止无线升级程序，需要重新上电，拉高BOOT引脚才能进入下载模式
 uint8_t vic_ble_ota_en = 1; // default enabled
 
+// tag of heartbeat
+char* vic_heartbeat_tag = NULL;
+
 // 1: yes
 // 0: no
 uint8_t vic_client_authenticated = 0;
@@ -82,6 +85,11 @@ static void vic_measure_battery(void) {
   vic_adc_voltage = voltage;
 }
 
+static void vic_heartbeat(char* tag) {
+  free(vic_heartbeat_tag);
+  vic_heartbeat_tag = tag;
+}
+
 static void vic_activate(void) {
   vic_renew_authentication();
 }
@@ -108,7 +116,9 @@ void vic_handle_incoming_message(char* data, uint8_t len) {
   ec_core_uart0_printf(" > cmd [%s] arg [%s]\r\n", command, argument);
 
   if (vic_client_authenticated) {
-    if (strcmp(command, "ON") == 0) { // QUERY_ON
+    if (strcmp(command, "HRB") == 0) { // HEARTBEAT
+      vic_heartbeat(argument);
+    } else if (strcmp(command, "ON") == 0) { // QUERY_ON
       vic_emit_on_state();
     } else if (strcmp(command, "AM") == 0) { // SET_ALARM
       ec_core_gpio_write(vic_gpio_output, (strcmp(argument, "1") == 0 ? EC_CORE_GPIO_LEVEL_L : EC_CORE_GPIO_LEVEL_H));

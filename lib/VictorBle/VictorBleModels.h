@@ -15,11 +15,12 @@ namespace Victor::Components {
   enum ServerCommandType {
     SERVER_COMMAND_NONE          = 0,
     SERVER_COMMAND_RESET         = 1,
-    SERVER_COMMAND_AUTHENTICATE  = 2,
-    SERVER_COMMAND_QUERY_BATTERY = 3,
-    SERVER_COMMAND_SET_OTA       = 4,
-    SERVER_COMMAND_SET_ALARM     = 5,
-    SERVER_COMMAND_QUERY_ON      = 6,
+    SERVER_COMMAND_HEARTBEAT     = 2,
+    SERVER_COMMAND_AUTHENTICATE  = 3,
+    SERVER_COMMAND_QUERY_BATTERY = 4,
+    SERVER_COMMAND_SET_OTA       = 5,
+    SERVER_COMMAND_SET_ALARM     = 6,
+    SERVER_COMMAND_QUERY_ON      = 7,
   };
 
   struct ServerNotification {
@@ -36,6 +37,8 @@ namespace Victor::Components {
       auto typeName = String("N/A");
       if (type == SERVER_COMMAND_RESET) {
         typeName = "RST";
+      } else if (type == SERVER_COMMAND_HEARTBEAT) {
+        typeName = "HRB";
       } else if (type == SERVER_COMMAND_AUTHENTICATE) {
         typeName = "AUTH";
       } else if (type == SERVER_COMMAND_QUERY_ON) {
