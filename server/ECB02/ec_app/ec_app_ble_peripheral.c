@@ -117,6 +117,8 @@ void vic_handle_incoming_message(char* data, uint8_t len) {
       vic_emit_battery_state();
     } else if (strcmp(command, "OTA") == 0) { // SET_OTA
       vic_set_ota_en(strcmp(argument, "1") == 0 ? 1 : 0);
+    } else if (strcmp(command, "RST") == 0) { // RESET
+      if (strcmp(argument, "1") == 0) { ec_core_sys_soft_reset(); }
     }
   } else if (strcmp(command, "AUTH") == 0) { // AUTHENTICATE
     vic_check_authentication(argument);
