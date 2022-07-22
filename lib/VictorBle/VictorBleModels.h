@@ -44,7 +44,7 @@ namespace Victor::Components {
       } else if (type == SERVER_COMMAND_QUERY_ON) {
         typeName = "ON";
       } else if (type == SERVER_COMMAND_SET_ALARM) {
-        typeName = "AM";
+        typeName = "ALM";
       } else if (type == SERVER_COMMAND_QUERY_BATTERY) {
         typeName = "BTY";
       } else if (type == SERVER_COMMAND_SET_OTA) {

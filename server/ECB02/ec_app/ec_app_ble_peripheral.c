@@ -120,7 +120,7 @@ void vic_handle_incoming_message(char* data, uint8_t len) {
       vic_heartbeat(argument);
     } else if (strcmp(command, "ON") == 0) { // QUERY_ON
       vic_emit_on_state();
-    } else if (strcmp(command, "AM") == 0) { // SET_ALARM
+    } else if (strcmp(command, "ALM") == 0) { // SET_ALARM
       ec_core_gpio_write(vic_gpio_output, (strcmp(argument, "1") == 0 ? EC_CORE_GPIO_LEVEL_L : EC_CORE_GPIO_LEVEL_H));
     } else if (strcmp(command, "BTY") == 0) { // QUERY_BATTERY
       vic_measure_battery();
