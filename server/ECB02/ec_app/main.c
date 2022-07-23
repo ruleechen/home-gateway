@@ -72,7 +72,7 @@ int main(void) {
   vic_uart_init();
   vic_gpio_init();
 
-  ec_core_sw_watchdog_init(EC_CORE_SW_TIMER6, 5, 12); // 初始化软件看门狗，广播超时时间5分钟，蓝牙连接超时时间12分钟
+  // ec_core_sw_watchdog_init(EC_CORE_SW_TIMER6, 5, 12); // 初始化软件看门狗，广播超时时间5分钟，蓝牙连接超时时间12分钟
   ec_core_sleep_enable(); // ec_core_sleep_disable(); // 禁止睡眠，串口可以接收数据
   ec_core_main_loop_run(); // 系统主循环
 }

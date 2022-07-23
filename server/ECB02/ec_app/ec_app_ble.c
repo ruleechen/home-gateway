@@ -3,10 +3,10 @@
 
 void ec_app_ble_param_init(void) {
   // 默认从机，PERIPHERAL
-  // ec_core_set_role(EC_CORE_BLE_ROLE_PERIPHERAL);
+  ec_core_set_role(EC_CORE_BLE_ROLE_PERIPHERAL);
 
   // 配置发射功率，默认3dbm
-  // ec_core_ble_set_power(EC_CORE_BLE_POWER_3DBM);
+  ec_core_ble_set_power(EC_CORE_BLE_POWER_3DBM);
 
   // 配置UUID - 16bit uuid
   ec_core_ble_set_suuid("1002");
@@ -25,7 +25,7 @@ void ec_app_ble_param_init(void) {
   uint8_t mac[6] = {0};
   ec_core_ble_get_mac(mac); //获取MAC地址
   char buf[25] = {0};
-  sprintf(buf, "RS020_%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  sprintf(buf, "RS022_%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
   ec_core_ble_peripheral_set_name((uint8_t *)buf, 18);
   // ec_core_ble_peripheral_set_name("BT_123", strlen("BT_123"));
 
@@ -34,8 +34,10 @@ void ec_app_ble_param_init(void) {
   ec_core_ble_peripheral_set_manufacturer_data(data, sizeof(data));
 
   // 设置广播间隔 200ms
-  // ec_core_ble_peripheral_set_adv_int(320);
-  // ec_core_ble_peripheral_reset_adv();
+  ec_core_ble_peripheral_set_adv_int(320);
+
+  // 低功耗，延迟大
+  ec_core_ble_peripheral_set_connect_param(160, 180, 4, 600);
 
   // 注册蓝牙回调
   ec_app_ble_peripheral_register_event();
